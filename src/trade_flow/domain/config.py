@@ -165,12 +165,29 @@ class SentimentConfig:
 
 
 @dataclass(frozen=True)
+class ExecutionConfig:
+    limit_offset_fraction: Decimal
+    default_tick_size: Decimal
+    order_timeout_seconds: int
+    estimated_fee_bps: int
+
+    def __post_init__(self) -> None:
+        if not Decimal(0) < self.limit_offset_fraction < Decimal(1):
+            raise ConfigError("execution limit offset must be in (0, 1)")
+        if self.default_tick_size <= 0 or self.order_timeout_seconds <= 0:
+            raise ConfigError("execution tick size and timeout must be positive")
+        if self.estimated_fee_bps < 0:
+            raise ConfigError("execution estimated fee cannot be negative")
+
+
+@dataclass(frozen=True)
 class AppConfig:
     strategy_version: str
     strategy: StrategyConfig
     risk: RiskConfig
     validation: ValidationConfig
     sentiment: SentimentConfig
+    execution: ExecutionConfig
 
     def canonical_mapping(self) -> dict[str, object]:
         return _canonicalize(asdict(self))
@@ -206,6 +223,7 @@ def load_config(path: str | Path) -> AppConfig:
     risk_raw = _mapping(raw.get("risk"), "risk")
     validation_raw = _mapping(raw.get("validation"), "validation")
     sentiment_raw = _mapping(raw.get("sentiment"), "sentiment")
+    execution_raw = _mapping(raw.get("execution"), "execution")
 
     factor_weights = FactorWeights(
         momentum=_decimal(factor_raw.get("momentum"), "factor_weights.momentum"),
@@ -319,6 +337,22 @@ def load_config(path: str | Path) -> AppConfig:
             for index, horizon in enumerate(horizons)
         ),
     )
+    execution = ExecutionConfig(
+        limit_offset_fraction=_decimal(
+            execution_raw.get("limit_offset_fraction"),
+            "execution.limit_offset_fraction",
+        ),
+        default_tick_size=_decimal(
+            execution_raw.get("default_tick_size"), "execution.default_tick_size"
+        ),
+        order_timeout_seconds=_integer(
+            execution_raw.get("order_timeout_seconds"),
+            "execution.order_timeout_seconds",
+        ),
+        estimated_fee_bps=_integer(
+            execution_raw.get("estimated_fee_bps"), "execution.estimated_fee_bps"
+        ),
+    )
     strategy_version = raw.get("strategy_version")
     if not isinstance(strategy_version, str) or not strategy_version.strip():
         raise ConfigError("strategy_version must be a non-empty string")
@@ -328,4 +362,5 @@ def load_config(path: str | Path) -> AppConfig:
         risk=risk,
         validation=validation,
         sentiment=sentiment,
+        execution=execution,
     )

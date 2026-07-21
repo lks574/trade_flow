@@ -46,3 +46,9 @@ transaction_cost_bps = [5, 15, 30]
 candidate_limit = 20
 minimum_observation_sessions = 60
 forward_return_horizons = [1, 5, 20]
+
+[execution]
+limit_offset_fraction = 0.003
+default_tick_size = 0.01
+order_timeout_seconds = 600
+estimated_fee_bps = 15
