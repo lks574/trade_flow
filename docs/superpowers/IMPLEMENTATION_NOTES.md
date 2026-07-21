@@ -91,3 +91,28 @@
 - 제출 응답 유실 시 broker 대조 결과가 있을 때만 상태를 복구한다.
 - 로컬 의도와 broker 주문이 대조되지 않거나 취소를 확인할 수 없으면 후속 주문을 중단한다.
 - 실제 KIS adapter는 공식 해외주식 모의 TR 확인 전까지 구현하지 않는다.
+
+### 구현 Phase 6 — production 기본 차단과 출시 관문
+
+- 기본 runtime은 `paper + dry_run + real order disabled + release not approved`다.
+- dry-run, kill switch, stale data, 계좌·미체결 불일치, 실행시간 초과는 permit을 발급하지 않는다.
+- 일일 손실 한도 발동 시 매수 permit은 차단하고 매도 계획만 허용한다.
+- production은 real-order 명시 활성화, release 승인, account hash allowlist를 모두 요구한다.
+- permit은 run ID와 주문 의도 전체에 묶이며 다른 실행이나 변경된 계획에 재사용할 수 없다.
+- 등급 A/B는 paper 20거래일, 등급 C는 추가 60거래일을 요구한다.
+- production은 dry-run 5거래일 뒤 소액 20거래일을 순서대로 요구한다.
+- 장애주입, 치명 오류, silent failure, 포지션 불일치가 있으면 출시를 승인하지 않는다.
+- 알림 실패는 실행 성공과 별도 상태 및 non-zero exit code로 기록할 수 있다.
+
+## 외부 연동 전 남은 구현
+
+다음 항목은 코드 누락이 아니라 외부 데이터·공식 API·사용자 승인 없이는 확정할 수 없는
+의도적인 차단 항목이다.
+
+- 미국 시장 캘린더와 최신 원본·분할조정·배당 데이터 adapter
+- 유니버스 B 공개 편입·제외 이력과 출처 검수
+- KIS 해외주식 paper 주문·정정·취소·체결조회 adapter 및 실제 응답 fixture
+- 거래소·종목별 호가 단위와 지정가 허용 폭 승인
+- Telegram notifier와 Telegram 자체 장애를 감지할 외부 dead-man 채널
+- Phase 1 실데이터 결과에 따른 레짐 A/B 선택
+- production 소액 자본 상한과 사용자 release 승인 기록

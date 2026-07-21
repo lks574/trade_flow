@@ -18,6 +18,7 @@ from trade_flow.execution import (
     execute_plan,
     plan_orders,
 )
+from trade_flow.safety import ExecutionEnvironment, SafetyContext, authorize_execution
 
 
 def _account() -> AccountSnapshot:
@@ -101,6 +102,25 @@ def _intent() -> OrderIntent:
     return OrderIntent("intent-1", date(2026, 1, 2), "A", "buy", 1, Decimal("100"), 0)
 
 
+def _permit(plan: OrderPlan):
+    context = SafetyContext(
+        environment=ExecutionEnvironment.PAPER,
+        dry_run=False,
+        allow_real_orders=False,
+        release_approved=False,
+        account_hash="account-hash",
+        allowed_account_hashes=frozenset(),
+        kill_switch_active=False,
+        data_fresh=True,
+        account_reconciled=True,
+        open_orders_reconciled=True,
+        within_execution_window=True,
+        daily_return=Decimal(0),
+        daily_loss_limit=Decimal("0.03"),
+    )
+    return authorize_execution(context, plan, run_id="run-1")
+
+
 class RecoveringBroker:
     def __init__(self, *, recover: bool = True) -> None:
         self.recover = recover
@@ -127,8 +147,22 @@ def test_lost_submit_response_is_reconciled_without_duplicate(tmp_path) -> None:
     broker = RecoveringBroker()
     plan = OrderPlan((_intent(),), MappingProxyType({}))
 
-    recovered = execute_plan(plan, broker, repository, run_id="run-1", timeout_seconds=10)
-    repeated = execute_plan(plan, broker, repository, run_id="run-1", timeout_seconds=10)
+    recovered = execute_plan(
+        plan,
+        broker,
+        repository,
+        run_id="run-1",
+        timeout_seconds=10,
+        permit=_permit(plan),
+    )
+    repeated = execute_plan(
+        plan,
+        broker,
+        repository,
+        run_id="run-1",
+        timeout_seconds=10,
+        permit=_permit(plan),
+    )
 
     assert recovered[0].status == "filled"
     assert repeated == ()
@@ -142,7 +176,14 @@ def test_unknown_submit_status_blocks_following_orders(tmp_path) -> None:
     plan = OrderPlan((_intent(),), MappingProxyType({}))
 
     with pytest.raises(ExecutionUncertain, match="cannot reconcile"):
-        execute_plan(plan, broker, repository, run_id="run-1", timeout_seconds=10)
+        execute_plan(
+            plan,
+            broker,
+            repository,
+            run_id="run-1",
+            timeout_seconds=10,
+            permit=_permit(plan),
+        )
 
     assert broker.submit_count == 1
     assert repository.status("intent-1") == "unknown"
@@ -153,14 +194,46 @@ def test_unreconciled_local_intent_is_never_resubmitted(tmp_path) -> None:
     intent = _intent()
     assert repository.reserve("run-1", intent)
     broker = RecoveringBroker(recover=False)
+    plan = OrderPlan((intent,), MappingProxyType({}))
 
     with pytest.raises(ExecutionUncertain, match="local intent"):
         execute_plan(
-            OrderPlan((intent,), MappingProxyType({})),
+            plan,
             broker,
             repository,
             run_id="run-1",
             timeout_seconds=10,
+            permit=_permit(plan),
         )
 
     assert broker.submit_count == 0
+
+
+def test_run_terminal_state_records_notification_failure(tmp_path) -> None:
+    database = initialize_database(tmp_path / "trade_flow.db")
+    runs = RunRepository(database)
+    runs.start(
+        run_id="run-1",
+        environment="paper",
+        account_hash="account-hash",
+        trading_date=date(2026, 1, 2),
+        signal_date=date(2026, 1, 1),
+        data_hash="data",
+        config_hash="config",
+        universe_hash="universe",
+    )
+
+    runs.finish(
+        "run-1",
+        status="completed",
+        notification_status="failed",
+        exit_code=2,
+    )
+
+    import sqlite3
+
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            "SELECT status, notification_status, exit_code FROM runs WHERE run_id = 'run-1'"
+        ).fetchone()
+    assert row == ("completed", "failed", 2)

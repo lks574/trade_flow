@@ -1,0 +1,6 @@
+environment = "paper"
+dry_run = true
+allow_real_orders = false
+release_approved = false
+allowed_account_hashes = []
+kill_switch_path = "STOP_TRADING"

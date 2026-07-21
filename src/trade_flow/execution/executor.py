@@ -9,6 +9,7 @@ from trade_flow.execution.models import (
     OrderPlan,
     SubmissionStatusUnknown,
 )
+from trade_flow.safety.gate import ExecutionPermit, validate_permit
 
 
 class OrderStore(Protocol):
@@ -75,7 +76,9 @@ def execute_plan(
     *,
     run_id: str,
     timeout_seconds: int,
+    permit: ExecutionPermit,
 ) -> tuple[BrokerOrder, ...]:
+    validate_permit(permit, plan, run_id)
     completed: list[BrokerOrder] = []
     ordered = sorted(plan.intents, key=lambda intent: (intent.side != "sell", intent.symbol))
     for intent in ordered:

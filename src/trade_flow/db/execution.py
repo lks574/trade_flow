@@ -45,6 +45,29 @@ class RunRepository:
                 ),
             )
 
+    def finish(
+        self,
+        run_id: str,
+        *,
+        status: str,
+        notification_status: str,
+        exit_code: int,
+    ) -> None:
+        allowed = {"skipped", "blocked", "completed", "failed", "needs_review"}
+        if status not in allowed:
+            raise ValueError("invalid terminal run status")
+        with sqlite3.connect(self.database_path) as connection:
+            cursor = connection.execute(
+                """
+                UPDATE runs
+                SET status = ?, notification_status = ?, ended_at = ?, exit_code = ?
+                WHERE run_id = ? AND status = 'started'
+                """,
+                (status, notification_status, datetime.now(UTC).isoformat(), exit_code, run_id),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("run is missing or already terminal")
+
 
 class OrderRepository:
     def __init__(self, database_path: str | Path) -> None:
