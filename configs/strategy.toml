@@ -1,0 +1,43 @@
+strategy_version = "phase1-initial"
+
+[strategy]
+main_count = 5
+momentum_days = 60
+sma_short_days = 50
+sma_long_days = 200
+rsi_days = 14
+rsi_threshold = 50
+macd_fast_days = 12
+macd_slow_days = 26
+macd_signal_days = 9
+tie_break_liquidity_days = 20
+main_target_weight = 0.88
+general_symbol_weight_cap = 0.25
+high_volatility_total_cap = 0.10
+high_volatility_symbol_cap = 0.05
+high_volatility_max_symbols = 2
+cash_buffer_weight = 0.02
+minimum_price_days = 201
+maximum_recent_missing_days = 0
+
+[strategy.factor_weights]
+momentum = 0.40
+trend = 0.25
+rsi = 0.15
+macd = 0.20
+
+[risk]
+stop_loss_fraction = 0.10
+daily_loss_limit_fraction = 0.03
+regime_vix_threshold = 30
+regime_wti_return_days = 20
+regime_wti_return_threshold = 0.30
+regime_exit_confirmation_days = 3
+experimental_equity_cap = 0.50
+
+[validation]
+minimum_backtest_years = 10
+holdout_years = 2
+walk_forward_train_years = 5
+walk_forward_validation_years = 1
+transaction_cost_bps = [5, 15, 30]
