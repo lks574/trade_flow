@@ -78,3 +78,20 @@ def test_daily_bar_requires_timezone_aware_fetch_time() -> None:
     with pytest.raises(DataQualityError, match="timezone-aware"):
         bar = _bar("AAPL", date(2026, 7, 20))
         DailyBar(**{**bar.__dict__, "fetched_at": datetime(2026, 7, 21)})
+
+
+def test_snapshot_rejects_two_sources_for_same_canonical_session() -> None:
+    session = date(2026, 7, 20)
+    first = _bar("AAPL", session)
+    second = DailyBar(**{**first.__dict__, "source": "another-provider"})
+
+    snapshot = build_market_data_snapshot(
+        [first, second],
+        as_of=session,
+        expected_sessions=[session],
+        expected_symbols=["AAPL"],
+        recent_session_count=1,
+    )
+
+    with pytest.raises(DataQualityError, match="duplicate_bar"):
+        snapshot.quality_report.require_valid()

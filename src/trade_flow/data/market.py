@@ -154,12 +154,12 @@ def _quality_report(
     recent_session_count: int,
 ) -> QualityReport:
     issues: list[QualityIssue] = []
-    keys = [(bar.symbol, bar.session_date, bar.source) for bar in bars]
-    for (symbol, session_date, _source), count in Counter(keys).items():
+    keys = [(bar.symbol, bar.session_date) for bar in bars]
+    for (symbol, session_date), count in Counter(keys).items():
         if count > 1:
             issues.append(
                 QualityIssue(
-                    "duplicate_bar", "duplicate symbol/date/source bar", symbol, session_date
+                    "duplicate_bar", "duplicate canonical symbol/date bar", symbol, session_date
                 )
             )
 
