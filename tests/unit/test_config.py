@@ -35,3 +35,11 @@ def test_allocations_sum_to_one() -> None:
         + strategy.cash_buffer_weight
         == 1
     )
+
+
+def test_sentiment_remains_a_shadow_configuration() -> None:
+    config = load_config("configs/strategy.toml")
+
+    assert config.sentiment.candidate_limit == 20
+    assert config.sentiment.minimum_observation_sessions == 60
+    assert config.sentiment.forward_return_horizons == (1, 5, 20)

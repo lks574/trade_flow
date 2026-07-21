@@ -150,11 +150,27 @@ class ValidationConfig:
 
 
 @dataclass(frozen=True)
+class SentimentConfig:
+    candidate_limit: int
+    minimum_observation_sessions: int
+    forward_return_horizons: tuple[int, ...]
+
+    def __post_init__(self) -> None:
+        if self.candidate_limit <= 0 or self.minimum_observation_sessions <= 0:
+            raise ConfigError("sentiment limits must be positive")
+        if not self.forward_return_horizons or any(
+            horizon <= 0 for horizon in self.forward_return_horizons
+        ):
+            raise ConfigError("sentiment forward horizons must be positive")
+
+
+@dataclass(frozen=True)
 class AppConfig:
     strategy_version: str
     strategy: StrategyConfig
     risk: RiskConfig
     validation: ValidationConfig
+    sentiment: SentimentConfig
 
     def canonical_mapping(self) -> dict[str, object]:
         return _canonicalize(asdict(self))
@@ -189,6 +205,7 @@ def load_config(path: str | Path) -> AppConfig:
     factor_raw = _mapping(strategy_raw.get("factor_weights"), "strategy.factor_weights")
     risk_raw = _mapping(raw.get("risk"), "risk")
     validation_raw = _mapping(raw.get("validation"), "validation")
+    sentiment_raw = _mapping(raw.get("sentiment"), "sentiment")
 
     factor_weights = FactorWeights(
         momentum=_decimal(factor_raw.get("momentum"), "factor_weights.momentum"),
@@ -288,6 +305,20 @@ def load_config(path: str | Path) -> AppConfig:
             for index, cost in enumerate(costs)
         ),
     )
+    horizons = sentiment_raw.get("forward_return_horizons")
+    if not isinstance(horizons, list):
+        raise ConfigError("sentiment.forward_return_horizons must be an array")
+    sentiment = SentimentConfig(
+        candidate_limit=_integer(sentiment_raw.get("candidate_limit"), "sentiment.candidate_limit"),
+        minimum_observation_sessions=_integer(
+            sentiment_raw.get("minimum_observation_sessions"),
+            "sentiment.minimum_observation_sessions",
+        ),
+        forward_return_horizons=tuple(
+            _integer(horizon, f"sentiment.forward_return_horizons[{index}]")
+            for index, horizon in enumerate(horizons)
+        ),
+    )
     strategy_version = raw.get("strategy_version")
     if not isinstance(strategy_version, str) or not strategy_version.strip():
         raise ConfigError("strategy_version must be a non-empty string")
@@ -296,4 +327,5 @@ def load_config(path: str | Path) -> AppConfig:
         strategy=strategy,
         risk=risk,
         validation=validation,
+        sentiment=sentiment,
     )

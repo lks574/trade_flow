@@ -41,3 +41,8 @@ holdout_years = 2
 walk_forward_train_years = 5
 walk_forward_validation_years = 1
 transaction_cost_bps = [5, 15, 30]
+
+[sentiment]
+candidate_limit = 20
+minimum_observation_sessions = 60
+forward_return_horizons = [1, 5, 20]
