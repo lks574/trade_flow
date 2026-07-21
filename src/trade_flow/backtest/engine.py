@@ -8,6 +8,7 @@ from decimal import ROUND_FLOOR, Decimal
 from types import MappingProxyType
 
 from trade_flow.data import DailyBar, MarketDataSnapshot, build_market_data_snapshot
+from trade_flow.data.universe import UniverseSpec
 from trade_flow.domain.config import AppConfig
 from trade_flow.risk import RegimePolicy, RegimeState, adjust_weights_for_regime
 from trade_flow.strategy import signal
@@ -57,6 +58,12 @@ def _position_weights(
         for symbol, position in positions.items()
         if symbol in prices and position.quantity > 0
     }
+
+
+def _active_symbols(symbols: Iterable[str] | UniverseSpec, session_date: date) -> set[str]:
+    if isinstance(symbols, UniverseSpec):
+        return {mapping.symbol for mapping in symbols.active_symbols(session_date)}
+    return set(symbols)
 
 
 def _execute_targets(
@@ -150,8 +157,8 @@ def run_backtest(
     snapshot: MarketDataSnapshot,
     config: AppConfig,
     *,
-    main_symbols: Iterable[str],
-    high_volatility_symbols: Iterable[str] = (),
+    main_symbols: Iterable[str] | UniverseSpec,
+    high_volatility_symbols: Iterable[str] | UniverseSpec = (),
     initial_cash: Decimal = Decimal("20000000"),
     transaction_cost_bps: int = 15,
     regime_states: Mapping[date, RegimeState] | None = None,
@@ -160,9 +167,6 @@ def run_backtest(
     snapshot.quality_report.require_valid()
     if initial_cash <= 0 or transaction_cost_bps < 0:
         raise ValueError("initial cash must be positive and transaction cost cannot be negative")
-    main_set = set(main_symbols)
-    high_set = set(high_volatility_symbols)
-    expected_symbols = main_set | high_set
     bars_by_date: dict[date, dict[str, DailyBar]] = defaultdict(dict)
     history: list[DailyBar] = []
     for bar in snapshot.prices:
@@ -210,6 +214,9 @@ def run_backtest(
         if session_index + 1 < config.strategy.minimum_price_days:
             previous_nav = nav
             continue
+        main_set = _active_symbols(main_symbols, session_date)
+        high_set = _active_symbols(high_volatility_symbols, session_date)
+        expected_symbols = main_set | high_set
         sliced = build_market_data_snapshot(
             history,
             as_of=session_date,

@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from trade_flow.backtest import run_backtest
 from trade_flow.data import MarketDataSnapshot
+from trade_flow.data.universe import UniverseSpec
 from trade_flow.domain.config import AppConfig
 from trade_flow.risk import RegimePolicy, RegimeState
 from trade_flow.validation.benchmarks import buy_and_hold_benchmark, cash_benchmark
@@ -61,8 +62,8 @@ def evaluate_scenarios(
     snapshot: MarketDataSnapshot,
     config: AppConfig,
     *,
-    main_symbols: set[str],
-    high_volatility_symbols: set[str] | None = None,
+    main_symbols: set[str] | UniverseSpec,
+    high_volatility_symbols: set[str] | UniverseSpec | None = None,
     initial_cash: Decimal = Decimal("20000000"),
     regime_states: Mapping[date, RegimeState] | None = None,
     benchmark_symbol: str = "SPY",

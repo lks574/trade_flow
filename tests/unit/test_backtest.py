@@ -2,7 +2,13 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
 from trade_flow.backtest import run_backtest
-from trade_flow.data import DailyBar, build_market_data_snapshot
+from trade_flow.data import (
+    DailyBar,
+    SymbolMapping,
+    UniverseGrade,
+    UniverseSpec,
+    build_market_data_snapshot,
+)
 from trade_flow.domain.config import load_config
 
 
@@ -59,3 +65,35 @@ def test_backtest_executes_close_signal_at_next_open_with_costs() -> None:
     assert trade.transaction_cost > 0
     assert trade.realized_pnl is None
     assert result.equity_curve[-1].cash >= 0
+
+
+def test_backtest_uses_point_in_time_universe_membership() -> None:
+    config = load_config("configs/strategy.toml")
+    base = _snapshot()
+    sessions = sorted({bar.session_date for bar in base.prices})
+    second_symbol = tuple(DailyBar(**{**bar.__dict__, "symbol": "B"}) for bar in base.prices)
+    snapshot = build_market_data_snapshot(
+        [*base.prices, *second_symbol],
+        as_of=sessions[-1],
+        expected_sessions=sessions,
+        expected_symbols=["A", "B"],
+    )
+    universe = UniverseSpec(
+        grade=UniverseGrade.B,
+        description="fixture membership history",
+        symbols=(
+            SymbolMapping("A", "A", "A", sessions[0], sessions[-3], "fixture"),
+            SymbolMapping("B", "B", "B", sessions[-2], None, "fixture"),
+        ),
+    )
+
+    result = run_backtest(
+        snapshot,
+        config,
+        main_symbols=universe,
+        initial_cash=Decimal("20000000"),
+        transaction_cost_bps=0,
+    )
+
+    assert result.trades[0].symbol == "B"
+    assert result.trades[0].execution_date == sessions[-1]

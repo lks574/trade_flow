@@ -20,6 +20,7 @@
 | DEFERRED | 유니버스 B | 공개 편입·제외 이력과 출처를 포함한 point-in-time 유니버스가 필요하다. 현재 설정은 빈 등급 C bootstrap이다. | Phase 1 승인 전 |
 | OPEN | 필수 시장 입력 | SPY, VIX, WTI, 원본 OHLCV, split-adjusted OHLC, 현금배당이 필요하다. | 데이터 수령 시 |
 | DONE | 품질 경계 | 미래 봉, 중복 키, 최근 거래일 결측, OHLC 역전, 음수 거래량·배당을 canonical snapshot에서 검사한다. | 2026-07-21 |
+| DONE | PIT 적용 경로 | 백테스터는 정적 목록뿐 아니라 신호일별 `UniverseSpec.active_symbols()`를 사용한다. | 최종 통합 검증 |
 
 ## 전략 및 검증
 
