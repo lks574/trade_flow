@@ -102,8 +102,13 @@ def adjust_weights_for_regime(
     else:
         total = sum(target_weights.values())
         scale = min(Decimal(1), config.experimental_equity_cap / total) if total else Decimal(1)
-        adjusted = {symbol: weight * scale for symbol, weight in target_weights.items()}
+        adjusted = {
+            symbol: min(weight * scale, current_weights.get(symbol, Decimal(0)))
+            for symbol, weight in target_weights.items()
+        }
         if total > config.experimental_equity_cap and adjusted:
-            first_symbol = sorted(adjusted)[0]
-            adjusted[first_symbol] += config.experimental_equity_cap - sum(adjusted.values())
+            excess = sum(adjusted.values()) - config.experimental_equity_cap
+            if excess > 0:
+                first_symbol = sorted(adjusted)[0]
+                adjusted[first_symbol] -= excess
     return MappingProxyType(dict(sorted(adjusted.items())))

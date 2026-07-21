@@ -3,14 +3,15 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, time
 from decimal import ROUND_FLOOR, Decimal
 from types import MappingProxyType
 
 from trade_flow.data import DailyBar, MarketDataSnapshot, build_market_data_snapshot
 from trade_flow.data.universe import UniverseSpec
 from trade_flow.domain.config import AppConfig
-from trade_flow.risk import RegimePolicy, RegimeState, adjust_weights_for_regime
+from trade_flow.execution.models import AccountSnapshot, PositionSnapshot
+from trade_flow.risk import RegimePolicy, RegimeState, apply_risk_policy
 from trade_flow.strategy import signal
 
 
@@ -46,18 +47,6 @@ class BacktestResult:
     trades: tuple[SimulatedTrade, ...]
     final_positions: Mapping[str, Position]
     evaluation_start_date: date | None = None
-
-
-def _position_weights(
-    positions: Mapping[str, Position], prices: Mapping[str, Decimal], nav: Decimal
-) -> dict[str, Decimal]:
-    if nav <= 0:
-        return {}
-    return {
-        symbol: Decimal(position.quantity) * prices[symbol] / nav
-        for symbol, position in positions.items()
-        if symbol in prices and position.quantity > 0
-    }
 
 
 def _active_symbols(symbols: Iterable[str] | UniverseSpec, session_date: date) -> set[str]:
@@ -229,37 +218,38 @@ def run_backtest(
             main_symbols=main_set,
             high_volatility_symbols=high_set,
         )
-        target_weights = dict(strategy_result.target_weights)
-        for symbol, position in positions.items():
-            close = close_prices.get(symbol)
-            if close is not None and close <= position.average_cost * (
-                Decimal(1) - config.risk.stop_loss_fraction
-            ):
-                target_weights[symbol] = Decimal(0)
-
         state = (regime_states or {}).get(
             session_date,
             RegimeState(session_date, False, True, 0, ()),
         )
-        current_weights = _position_weights(positions, close_prices, nav)
-        target_weights = dict(
-            adjust_weights_for_regime(
-                target_weights,
-                current_weights,
-                state,
-                regime_policy,
-                config.risk,
-            )
+        account = AccountSnapshot(
+            account_hash="backtest",
+            captured_at=datetime.combine(session_date, time.min, tzinfo=UTC),
+            nav=nav,
+            cash=cash,
+            positions=MappingProxyType(
+                {
+                    symbol: PositionSnapshot(
+                        symbol,
+                        position.quantity,
+                        position.average_cost,
+                        close_prices[symbol],
+                    )
+                    for symbol, position in positions.items()
+                    if symbol in close_prices
+                }
+            ),
         )
-        daily_loss_triggered = (
-            previous_nav > 0
-            and nav / previous_nav - Decimal(1) <= -config.risk.daily_loss_limit_fraction
+        daily_return = nav / previous_nav - Decimal(1) if previous_nav > 0 else Decimal(0)
+        risk_target = apply_risk_policy(
+            strategy_result,
+            account,
+            state,
+            config.risk,
+            regime_policy=regime_policy,
+            daily_return=daily_return,
         )
-        if daily_loss_triggered:
-            target_weights = {
-                symbol: min(weight, current_weights.get(symbol, Decimal(0)))
-                for symbol, weight in target_weights.items()
-            }
+        target_weights = dict(risk_target.target_weights)
         pending = (session_date, MappingProxyType(dict(sorted(target_weights.items()))))
         previous_nav = nav
 

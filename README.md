@@ -4,9 +4,10 @@
 
 현재 범위는 Phase 1 백테스터와 전략 검증이다. KIS 주문 연동은 Phase 2에서 진행한다.
 
-핵심 전략·백테스터·검증·shadow 감정·멱등 주문·출시 안전 게이트의 내부 구현은
-완료되어 있다. 실데이터 adapter와 KIS adapter는 외부 데이터 및 공식 paper API 확인 뒤
-연결한다. 미결·승인 항목은 `docs/superpowers/IMPLEMENTATION_NOTES.md`에서 관리한다.
+핵심 전략·백테스터·검증·shadow 감정·멱등 주문·rebalance·출시 안전 게이트의
+내부 라이브러리는 구현되어 있다. 하지만 전체 시스템은 아직 조립 중이다. 실데이터 및
+KIS adapter와 일일 12단계 오케스트레이터의 락·시장 캘린더·실행 지연·백업은 미구현이다.
+미결·승인 항목은 `docs/superpowers/IMPLEMENTATION_NOTES.md`에서 관리한다.
 
 ## 개발 환경
 

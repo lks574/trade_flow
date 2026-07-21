@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS prices (
@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS orders (
     limit_price TEXT NOT NULL,
     status TEXT NOT NULL,
     error_code TEXT
+);
+
+CREATE TABLE IF NOT EXISTS order_events (
+    event_id INTEGER PRIMARY KEY,
+    intent_id TEXT NOT NULL REFERENCES orders(intent_id),
+    status TEXT NOT NULL,
+    broker_order_id TEXT,
+    error_code TEXT,
+    recorded_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS fills (

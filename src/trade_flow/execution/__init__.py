@@ -12,6 +12,7 @@ from trade_flow.execution.models import (
     SubmissionStatusUnknown,
 )
 from trade_flow.execution.planner import plan_orders
+from trade_flow.execution.rebalance import RebalanceResult, execute_rebalance
 
 __all__ = [
     "AccountSnapshot",
@@ -22,7 +23,9 @@ __all__ = [
     "OrderPlan",
     "PositionSnapshot",
     "Quote",
+    "RebalanceResult",
     "SubmissionStatusUnknown",
     "execute_plan",
+    "execute_rebalance",
     "plan_orders",
 ]

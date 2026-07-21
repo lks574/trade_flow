@@ -12,6 +12,7 @@ from trade_flow.safety import (
     ProductionSessionResult,
     SafetyBlocked,
     SafetyContext,
+    apply_safety_filters,
     assess_paper_readiness,
     assess_production_readiness,
     authorize_execution,
@@ -55,6 +56,14 @@ def test_safety_gate_blocks_stale_data_and_daily_loss_buys() -> None:
         _context(daily_return=Decimal("-0.03")), _plan("sell"), run_id="run"
     )
     assert permit.run_id == "run"
+
+    mixed = OrderPlan(
+        (_plan("sell").intents[0], _plan("buy").intents[0]),
+        MappingProxyType({}),
+    )
+    filtered = apply_safety_filters(_context(daily_return=Decimal("-0.03")), mixed)
+    assert [intent.side for intent in filtered.intents] == ["sell"]
+    assert authorize_execution(_context(daily_return=Decimal("-0.03")), filtered, run_id="run")
 
 
 def test_production_is_blocked_by_default_and_requires_allowlist() -> None:

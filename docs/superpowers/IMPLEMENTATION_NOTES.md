@@ -44,6 +44,7 @@
 | OPEN | KIS 해외주식 모의 지원 | 주문·정정·취소·체결조회 TR과 idempotency 대조 필드를 공식 문서와 sandbox에서 확인해야 한다. | Phase 2 착수 시 |
 | OPEN | 알림 dead-man 채널 | Telegram 실패 자체를 감지할 외부 채널은 사용자 결정이 필요하다. | Phase 2 운영 준비 |
 | OPEN | 실계좌 자본 상한 | dry-run과 모의투자 승인 뒤 사용자가 별도로 정한다. | Phase 3 승인 시 |
+| OPEN | 일일 오케스트레이터 | `execute_rebalance`는 매도→계좌 재조회→매수 2-pass만 조립한다. 락, 휴장 분기, 실행 허용 지연, 전체 12단계 흐름은 미구현이다. | Phase 2 착수 시 |
 
 ## 구현 Phase 기록
 
@@ -104,6 +105,16 @@
 - production은 dry-run 5거래일 뒤 소액 20거래일을 순서대로 요구한다.
 - 장애주입, 치명 오류, silent failure, 포지션 불일치가 있으면 출시를 승인하지 않는다.
 - 알림 실패는 실행 성공과 별도 상태 및 non-zero exit code로 기록할 수 있다.
+
+### 2026-07-21 구현 리뷰 반영
+
+- `apply_risk_policy`를 공통 함수로 추출해 백테스터와 rebalance가 함께 호출한다.
+- 레짐 B도 위기 중 현재 비중보다 늘리거나 새 종목을 매수하지 않는다.
+- 일일손실 시 `apply_safety_filters`가 매수만 제거하고 보호 매도를 보존한다.
+- `order_events` append-only 이력으로 `unknown`을 포함한 상태 전이를 보존한다.
+- fills와 account snapshots writer를 구현했다.
+- 매도 terminal 확인 뒤 broker 계좌를 재조회하고 순번 1 매수를 다시 계산한다.
+- 위 변경은 수익률·회전율·MDD와 주문 수량에 영향을 주므로 Phase 1·2 재검증이 필요하다.
 
 ## 외부 연동 전 남은 구현
 

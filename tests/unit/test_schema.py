@@ -15,5 +15,13 @@ def test_initialize_database_creates_required_tables(tmp_path) -> None:
         }
         version = connection.execute("PRAGMA user_version").fetchone()[0]
 
-    assert tables == {"fills", "orders", "prices", "runs", "sentiment", "snapshots"}
+    assert tables == {
+        "fills",
+        "order_events",
+        "orders",
+        "prices",
+        "runs",
+        "sentiment",
+        "snapshots",
+    }
     assert version == SCHEMA_VERSION

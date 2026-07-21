@@ -52,4 +52,4 @@ def test_regime_policy_a_blocks_increases_and_b_caps_equity() -> None:
     capped = adjust_weights_for_regime(target, current, state, RegimePolicy.EQUITY_CAP, config)
 
     assert blocked == {"A": Decimal("0.2"), "B": Decimal(0)}
-    assert sum(capped.values()) == Decimal("0.5")
+    assert capped == {"A": Decimal("0.2"), "B": Decimal(0)}

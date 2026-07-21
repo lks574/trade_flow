@@ -187,6 +187,10 @@ def test_unknown_submit_status_blocks_following_orders(tmp_path) -> None:
 
     assert broker.submit_count == 1
     assert repository.status("intent-1") == "unknown"
+    assert repository.events("intent-1") == (
+        ("planned", None),
+        ("unknown", "submission_status_unknown"),
+    )
 
 
 def test_unreconciled_local_intent_is_never_resubmitted(tmp_path) -> None:

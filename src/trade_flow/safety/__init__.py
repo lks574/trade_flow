@@ -5,6 +5,7 @@ from trade_flow.safety.gate import (
     ExecutionPermit,
     SafetyBlocked,
     SafetyContext,
+    apply_safety_filters,
     authorize_execution,
 )
 from trade_flow.safety.release import (
@@ -25,6 +26,7 @@ __all__ = [
     "RuntimeConfig",
     "SafetyBlocked",
     "SafetyContext",
+    "apply_safety_filters",
     "assess_paper_readiness",
     "assess_production_readiness",
     "authorize_execution",

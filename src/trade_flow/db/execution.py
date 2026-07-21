@@ -91,7 +91,32 @@ class OrderRepository:
                     format(intent.limit_price, "f"),
                 ),
             )
+            if cursor.rowcount == 1:
+                self._record_event(connection, intent.intent_id, "planned", None, None)
             return cursor.rowcount == 1
+
+    @staticmethod
+    def _record_event(
+        connection: sqlite3.Connection,
+        intent_id: str,
+        status: str,
+        broker_order_id: str | None,
+        error_code: str | None,
+    ) -> None:
+        connection.execute(
+            """
+            INSERT INTO order_events (
+                intent_id, status, broker_order_id, error_code, recorded_at
+            ) VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                intent_id,
+                status,
+                broker_order_id,
+                error_code,
+                datetime.now(UTC).isoformat(),
+            ),
+        )
 
     def status(self, intent_id: str) -> str | None:
         with sqlite3.connect(self.database_path) as connection:
@@ -110,6 +135,13 @@ class OrderRepository:
                 """,
                 (order.broker_order_id, order.status, intent_id),
             )
+            self._record_event(
+                connection,
+                intent_id,
+                order.status,
+                order.broker_order_id,
+                None,
+            )
 
     def mark_unknown(self, intent_id: str, error_code: str) -> None:
         with sqlite3.connect(self.database_path) as connection:
@@ -117,3 +149,17 @@ class OrderRepository:
                 "UPDATE orders SET status = 'unknown', error_code = ? WHERE intent_id = ?",
                 (error_code, intent_id),
             )
+            self._record_event(connection, intent_id, "unknown", None, error_code)
+
+    def events(self, intent_id: str) -> tuple[tuple[str, str | None], ...]:
+        with sqlite3.connect(self.database_path) as connection:
+            rows = connection.execute(
+                """
+                SELECT status, error_code
+                FROM order_events
+                WHERE intent_id = ?
+                ORDER BY event_id
+                """,
+                (intent_id,),
+            ).fetchall()
+        return tuple((row[0], row[1]) for row in rows)

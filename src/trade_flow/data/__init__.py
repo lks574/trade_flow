@@ -8,6 +8,7 @@ from trade_flow.data.market import (
     QualityReport,
     build_market_data_snapshot,
 )
+from trade_flow.data.provider import MarketCalendar, MarketDataProvider
 from trade_flow.data.universe import (
     SymbolMapping,
     UniverseGrade,
@@ -19,6 +20,8 @@ __all__ = [
     "DataQualityError",
     "DailyBar",
     "MarketDataSnapshot",
+    "MarketCalendar",
+    "MarketDataProvider",
     "QualityIssue",
     "QualityReport",
     "SymbolMapping",

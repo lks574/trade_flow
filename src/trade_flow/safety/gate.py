@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from enum import StrEnum
+from types import MappingProxyType
 from typing import Protocol
 
 _PERMIT_KEY = object()
@@ -15,6 +17,7 @@ class IntentLike(Protocol):
 
 class PlanLike(Protocol):
     intents: tuple[IntentLike, ...]
+    drift: Mapping[str, str]
 
 
 class ExecutionEnvironment(StrEnum):
@@ -57,6 +60,22 @@ class SafetyBlocked(RuntimeError):
     def __init__(self, reasons: tuple[str, ...]) -> None:
         self.reasons = reasons
         super().__init__("execution blocked: " + ", ".join(reasons))
+
+
+def apply_safety_filters[PlanT: PlanLike](context: SafetyContext, plan: PlanT) -> PlanT:
+    if context.daily_return > -context.daily_loss_limit:
+        return plan
+    removed = [intent for intent in plan.intents if intent.side == "buy"]
+    if not removed:
+        return plan
+    drift = dict(plan.drift)
+    for intent in removed:
+        drift[intent.symbol] = "daily_loss_limit"
+    return replace(
+        plan,
+        intents=tuple(intent for intent in plan.intents if intent.side != "buy"),
+        drift=MappingProxyType(dict(sorted(drift.items()))),
+    )
 
 
 def authorize_execution(context: SafetyContext, plan: PlanLike, *, run_id: str) -> ExecutionPermit:
