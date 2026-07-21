@@ -1,0 +1,14 @@
+[
+  {
+    "event_id": "example-macro-1",
+    "published_at": "2026-07-21T12:00:00+00:00",
+    "headline": "Example macro event",
+    "source": "example",
+    "scope": "macro",
+    "direction": "mixed",
+    "severity": "medium",
+    "confidence": "0.80",
+    "summary": "Replace this fixture with normalized news or geopolitical events.",
+    "affected_symbols": []
+  }
+]

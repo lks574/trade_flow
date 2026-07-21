@@ -181,6 +181,40 @@ class ExecutionConfig:
 
 
 @dataclass(frozen=True)
+class MonitoringConfig:
+    daily_candidate_limit: int
+    weekly_candidate_limit: int
+    hold_rank_limit: int
+    minimum_entry_score: Decimal
+    replacement_score_margin: Decimal
+    large_move_fraction: Decimal
+    volume_spike_multiple: Decimal
+    material_event_confidence: Decimal
+    daily_event_lookback_days: int
+    weekly_event_lookback_days: int
+
+    def __post_init__(self) -> None:
+        if self.daily_candidate_limit <= 0 or self.weekly_candidate_limit <= 0:
+            raise ConfigError("monitoring candidate limits must be positive")
+        if self.weekly_candidate_limit > self.hold_rank_limit:
+            raise ConfigError("weekly candidate limit cannot exceed the hold rank limit")
+        unit_values = (
+            self.minimum_entry_score,
+            self.replacement_score_margin,
+            self.large_move_fraction,
+            self.material_event_confidence,
+        )
+        if any(value <= 0 or value > 1 for value in unit_values):
+            raise ConfigError("monitoring fractions and scores must be in (0, 1]")
+        if self.volume_spike_multiple <= 1:
+            raise ConfigError("volume_spike_multiple must be greater than 1")
+        if self.daily_event_lookback_days <= 0:
+            raise ConfigError("daily event lookback must be positive")
+        if self.weekly_event_lookback_days < self.daily_event_lookback_days:
+            raise ConfigError("weekly event lookback cannot be shorter than daily lookback")
+
+
+@dataclass(frozen=True)
 class AppConfig:
     strategy_version: str
     strategy: StrategyConfig
@@ -188,6 +222,7 @@ class AppConfig:
     validation: ValidationConfig
     sentiment: SentimentConfig
     execution: ExecutionConfig
+    monitoring: MonitoringConfig
 
     def canonical_mapping(self) -> dict[str, object]:
         return _canonicalize(asdict(self))
@@ -224,6 +259,7 @@ def load_config(path: str | Path) -> AppConfig:
     validation_raw = _mapping(raw.get("validation"), "validation")
     sentiment_raw = _mapping(raw.get("sentiment"), "sentiment")
     execution_raw = _mapping(raw.get("execution"), "execution")
+    monitoring_raw = _mapping(raw.get("monitoring"), "monitoring")
 
     factor_weights = FactorWeights(
         momentum=_decimal(factor_raw.get("momentum"), "factor_weights.momentum"),
@@ -353,6 +389,48 @@ def load_config(path: str | Path) -> AppConfig:
             execution_raw.get("estimated_fee_bps"), "execution.estimated_fee_bps"
         ),
     )
+    monitoring = MonitoringConfig(
+        daily_candidate_limit=_integer(
+            monitoring_raw.get("daily_candidate_limit"),
+            "monitoring.daily_candidate_limit",
+        ),
+        weekly_candidate_limit=_integer(
+            monitoring_raw.get("weekly_candidate_limit"),
+            "monitoring.weekly_candidate_limit",
+        ),
+        hold_rank_limit=_integer(
+            monitoring_raw.get("hold_rank_limit"),
+            "monitoring.hold_rank_limit",
+        ),
+        minimum_entry_score=_decimal(
+            monitoring_raw.get("minimum_entry_score"),
+            "monitoring.minimum_entry_score",
+        ),
+        replacement_score_margin=_decimal(
+            monitoring_raw.get("replacement_score_margin"),
+            "monitoring.replacement_score_margin",
+        ),
+        large_move_fraction=_decimal(
+            monitoring_raw.get("large_move_fraction"),
+            "monitoring.large_move_fraction",
+        ),
+        volume_spike_multiple=_decimal(
+            monitoring_raw.get("volume_spike_multiple"),
+            "monitoring.volume_spike_multiple",
+        ),
+        material_event_confidence=_decimal(
+            monitoring_raw.get("material_event_confidence"),
+            "monitoring.material_event_confidence",
+        ),
+        daily_event_lookback_days=_integer(
+            monitoring_raw.get("daily_event_lookback_days"),
+            "monitoring.daily_event_lookback_days",
+        ),
+        weekly_event_lookback_days=_integer(
+            monitoring_raw.get("weekly_event_lookback_days"),
+            "monitoring.weekly_event_lookback_days",
+        ),
+    )
     strategy_version = raw.get("strategy_version")
     if not isinstance(strategy_version, str) or not strategy_version.strip():
         raise ConfigError("strategy_version must be a non-empty string")
@@ -363,4 +441,5 @@ def load_config(path: str | Path) -> AppConfig:
         validation=validation,
         sentiment=sentiment,
         execution=execution,
+        monitoring=monitoring,
     )

@@ -52,3 +52,15 @@ limit_offset_fraction = 0.003
 default_tick_size = 0.01
 order_timeout_seconds = 600
 estimated_fee_bps = 15
+
+[monitoring]
+daily_candidate_limit = 3
+weekly_candidate_limit = 5
+hold_rank_limit = 10
+minimum_entry_score = 0.75
+replacement_score_margin = 0.10
+large_move_fraction = 0.05
+volume_spike_multiple = 2.0
+material_event_confidence = 0.80
+daily_event_lookback_days = 3
+weekly_event_lookback_days = 7

@@ -1,0 +1,10 @@
+{
+  "positions": [
+    {
+      "symbol": "AAPL",
+      "quantity": 10,
+      "average_price": "210.00",
+      "market_price": "215.00"
+    }
+  ]
+}

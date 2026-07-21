@@ -45,3 +45,9 @@ def test_sentiment_remains_a_shadow_configuration() -> None:
     assert config.sentiment.forward_return_horizons == (1, 5, 20)
     assert config.execution.limit_offset_fraction == Decimal("0.003")
     assert config.execution.order_timeout_seconds == 600
+    assert config.monitoring.daily_candidate_limit == 3
+    assert config.monitoring.weekly_candidate_limit == 5
+    assert config.monitoring.hold_rank_limit == 10
+    assert config.monitoring.minimum_entry_score == Decimal("0.75")
+    assert config.monitoring.daily_event_lookback_days == 3
+    assert config.monitoring.weekly_event_lookback_days == 7
