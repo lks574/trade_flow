@@ -57,4 +57,5 @@ def test_backtest_executes_close_signal_at_next_open_with_costs() -> None:
     assert trade.price == Decimal(150)
     assert trade.side == "buy"
     assert trade.transaction_cost > 0
+    assert trade.realized_pnl is None
     assert result.equity_curve[-1].cash >= 0

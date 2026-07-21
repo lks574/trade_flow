@@ -28,6 +28,7 @@ class SimulatedTrade:
     quantity: int
     price: Decimal
     transaction_cost: Decimal
+    realized_pnl: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class BacktestResult:
     equity_curve: tuple[EquityPoint, ...]
     trades: tuple[SimulatedTrade, ...]
     final_positions: Mapping[str, Position]
+    evaluation_start_date: date | None = None
 
 
 def _position_weights(
@@ -91,12 +93,22 @@ def _execute_targets(
         price = open_prices[symbol]
         cost = Decimal(quantity) * price * cost_rate
         cash += Decimal(quantity) * price - cost
+        average_cost = positions[symbol].average_cost
         if target == 0:
             positions.pop(symbol, None)
         else:
             positions[symbol] = Position(target, positions[symbol].average_cost)
         trades.append(
-            SimulatedTrade(signal_date, execution_date, symbol, "sell", quantity, price, cost)
+            SimulatedTrade(
+                signal_date,
+                execution_date,
+                symbol,
+                "sell",
+                quantity,
+                price,
+                cost,
+                Decimal(quantity) * (price - average_cost) - cost,
+            )
         )
 
     for symbol in sorted(symbols):
@@ -120,7 +132,16 @@ def _execute_targets(
         ) / Decimal(total_quantity)
         positions[symbol] = Position(total_quantity, average_cost)
         trades.append(
-            SimulatedTrade(signal_date, execution_date, symbol, "buy", quantity, price, cost)
+            SimulatedTrade(
+                signal_date,
+                execution_date,
+                symbol,
+                "buy",
+                quantity,
+                price,
+                cost,
+                None,
+            )
         )
     return cash, trades
 
@@ -239,4 +260,9 @@ def run_backtest(
         equity_curve=tuple(curve),
         trades=tuple(trades),
         final_positions=MappingProxyType(dict(sorted(positions.items()))),
+        evaluation_start_date=(
+            sessions[config.strategy.minimum_price_days]
+            if len(sessions) > config.strategy.minimum_price_days
+            else None
+        ),
     )
