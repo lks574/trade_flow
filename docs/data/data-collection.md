@@ -1,61 +1,44 @@
-# 데이터 수집 구조
+# 데이터 수집
 
-> 백테스트용 일봉 데이터를 3개 외부 소스에서 가져와 SQLite DB에 적재하는 방식. 이 방식을 메인으로 사용한다.
+백테스트용 데이터를 외부 소스(yfinance, 위키피디아)에서 가져와 SQLite DB에 적재한다.
 
-## 전체 구조
+## 설계 원칙
 
-```
-외부 소스 → collector(fetch) → storage/db.py(upsert) → SQLite → 전략/백테스트/리포트
-```
+- **코어는 dependency-free**: `src/trade_flow`는 stdlib만 사용(재현성). 수집기는 `[collect]` optional-deps(yfinance, lxml)로 분리하고 `scripts/`에서 lazy import 한다.
+- **멱등**: 모든 write는 `ON CONFLICT ... DO UPDATE` → 재실행 안전.
+- **원본 + 분할조정 분리**: `prices`에 원본 OHLC와 split-adjusted OHLC를 함께 저장. 배당은 `cash_dividend`로 따로 두어 포트폴리오 현금흐름에 한 번만 반영(스펙 3.2). 분할조정 divisor는 `data/adjust.py:split_adjustment_divisors`(순수 함수, 테스트됨).
 
-- 모든 소스가 동일한 `daily_price` 스키마(`storage/db.py:5`)로 저장 → 백테스트·전략·리포트는 DB만 읽음.
-- 모든 write는 `db.upsert_prices` 등 `ON CONFLICT DO UPDATE`로 멱등 → 재실행해도 안전.
+## 무엇을 쌓나
 
-## 1. 한국 주식 — 실운영 (pykrx)
+| 대상 | 테이블 | 소스 | 기간 |
+|---|---|---|---|
+| 미국주식 일봉 | `prices` | yfinance | 최소 10년 (종목당 ≥201거래일, 최근 20거래일 결측 0) |
+| 레짐(VIX·WTI) 종가 | `market_context` | yfinance (`^VIX`, `CL=F`) | 가능한 최대(목표 30년) |
+| 감정점수 | `sentiment` | Alpha Vantage | **Phase 2 — 아직 안 함** |
 
-- **소스**: pykrx → KRX(한국거래소) 공식 데이터
-- **흐름**: `scripts/collect.py` → `collector/update.py:run()` → `collector/krx.py`
-- `krx.fetch_day(d)` (`krx.py:35`): 하루치를 KOSPI·KOSDAQ 각각
-  - `stock.get_market_ohlcv(ymd, market=...)` — 시/고/저/종가·거래량·거래대금
-  - `stock.get_market_cap(ymd, market=...)` — 시가총액
-  - `with_retry`로 3회 재시도 + `DELAY_SEC=1.0` 지연 (KRX 레이트리밋 회피)
-- `update.run()` (`update.py:71`) 오케스트레이션:
-  - `missing_dates()`로 마지막 적재일+1 ~ 오늘의 평일만 계산 → 증분 수집
-  - `--backfill`이면 `backfill_years`(기본 10년) 전체 적재
-  - `detect_jumps()` + `_fix_corporate_action()`: 종가 전일 대비 50%↑ 점프 시 액면분할/배당 의심 → `fetch_ticker_history(adjusted=True)`로 수정주가 전체 이력 재적재
-  - `count_gate()`: 종목 수가 최근 평균의 80% 미만이면 "suspect" 경고
-- **자동 실행**: launchd, 평일 16:30 (`collect.py:1` 주석)
+- 유니버스: 위키피디아 S&P500 현재 구성종목 → grade C(생존편향 있는 부트스트랩). PIT 유니버스(grade A/B)는 별도·후순위.
+- `market_context`는 종가만 저장(`RegimeInput`이 close만 필요 → OHLCV는 dead column).
 
-## 2. 한국 주식 — 실험용 임시 (yfinance)
-
-- **소스**: yfinance → Yahoo Finance
-- **흐름**: `scripts/collect_kr_yf.py` → `data/kr.db`
-- **존재 이유**: pykrx가 KRX 로그인 필수로 바뀔 때 임시 대체 (`collect_kr_yf.py:3` 주석)
-- 대형주 ~120종목 하드코딩, `005930.KS` 형식으로 조회
-- **한계**: 현재 상장주만 → 생존편향, `marcap=0` 저장 (백테스트 시 `MIN_MARCAP=0` 필요)
-
-## 3. 미국 주식 (yfinance + 위키피디아)
-
-- **흐름**: `scripts/collect_us.py` → `collector/us.py` → `data/tradeflow_us.db` (별도 DB)
-- **유니버스** (`refresh_us_universe.py`): 위키피디아 S&P500/100 페이지를 httpx로 받아 `pd.read_html` 파싱 → `data/us_universe.txt`. 편입/편출 이력도 best-effort로 `index_membership` 테이블에
-- **가격/배당/분할** (`us.py:61 fetch_prices`): `yf.download` 수정주가 OHLCV + `yf.Ticker(t).actions`로 배당·분할
-- **시장 컨텍스트** (`us.py:86 fetch_context`): SPY, QQQ, ^VIX, CL=F, ^IRX → `market_context` 테이블
-  - `_sub()` (`us.py:48`): VIX·금리는 volume이 항상 NaN → 종가 기준으로만 dropna (전 행 삭제 방지)
-
-## 진입점
+## 실행
 
 ```bash
-python scripts/collect.py [--backfill]        # 한국(운영)
-python scripts/refresh_us_universe.py         # 미국 유니버스 갱신 (collect_us 전)
-python scripts/collect_us.py [--backfill]     # 미국
-python scripts/collect_kr_yf.py               # 한국 실험
+pip install -e '.[collect]'
+
+# 1. 유니버스 채우기: 위키피디아 S&P500 → configs/universe_main.toml
+python scripts/refresh_universe.py
+
+# 2. 일봉 + VIX/WTI 수집 → data/trade_flow.db
+python scripts/collect.py                 # prices 10년 + regime max
+python scripts/collect.py --years 15      # 기간 조절
+python scripts/collect.py --skip-prices   # 레짐만
 ```
 
-## 요약표
+- `provider_symbol`은 yfinance 형식(예: `BRK.B` → `BRK-B`). `refresh_universe.py`가 자동 변환.
+- `collect.py`는 백필용 `PriceRepository.save_bars`(품질 게이트 없는 원시 writer)를 사용. 신호일 품질 검증(`build_market_data_snapshot`)은 read-time에 캘린더와 함께 수행.
 
-| 항목 | KR(운영) | KR(실험) | US |
-|---|---|---|---|
-| 소스 | pykrx→KRX | yfinance | yfinance + 위키피디아 |
-| DB | `data/tradeflow.db` | `data/kr.db` | `data/tradeflow_us.db` |
-| 수정주가 | 점프 감지 시 사후 보정 | download 시 auto_adjust | download 시 auto_adjust |
-| 유니버스 | 전 종목 자동 등장 | 하드코딩 120개 | 위키피디아 파싱 |
+## 코드 위치
+
+- 스키마: `src/trade_flow/db/schema.py` (`prices`, `market_context`, ...)
+- 리포지토리: `db/prices.py`(`PriceRepository`), `db/market_context.py`(`MarketContextRepository` → `RegimeInput`)
+- 분할조정: `src/trade_flow/data/adjust.py`
+- 수집 스크립트: `scripts/refresh_universe.py`, `scripts/collect.py`

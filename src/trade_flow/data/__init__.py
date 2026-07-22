@@ -1,5 +1,6 @@
 """Canonical market-data and universe contracts."""
 
+from trade_flow.data.adjust import split_adjustment_divisors
 from trade_flow.data.market import (
     DailyBar,
     DataQualityError,
@@ -29,4 +30,5 @@ __all__ = [
     "UniverseSpec",
     "build_market_data_snapshot",
     "load_universe",
+    "split_adjustment_divisors",
 ]

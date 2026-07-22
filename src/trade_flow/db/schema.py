@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS prices (
@@ -22,6 +22,15 @@ CREATE TABLE IF NOT EXISTS prices (
     source TEXT NOT NULL,
     fetched_at TEXT NOT NULL,
     PRIMARY KEY (symbol, session_date, source)
+);
+
+CREATE TABLE IF NOT EXISTS market_context (
+    indicator TEXT NOT NULL,
+    session_date TEXT NOT NULL,
+    close TEXT NOT NULL,
+    source TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (indicator, session_date, source)
 );
 
 CREATE TABLE IF NOT EXISTS sentiment (

@@ -17,6 +17,7 @@ def test_initialize_database_creates_required_tables(tmp_path) -> None:
 
     assert tables == {
         "fills",
+        "market_context",
         "order_events",
         "orders",
         "prices",
