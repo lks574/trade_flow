@@ -67,28 +67,34 @@ def _build_clean_snapshot(
     *,
     start: date,
     raw_end: date,
+    cap_final: bool = True,
 ) -> tuple[MarketDataSnapshot, list[str], date, list[str]]:
-    """유효한 top-level 스냅샷을 만든다. 불량 바를 가진 심볼과 미완료 최종 세션을
-    제거하고, 잔여 품질 이슈가 있으면 해당 심볼을 드롭한 뒤 재시도한다."""
+    """유효한 top-level 스냅샷을 만든다. 불량 바를 가진 심볼을 드롭한 뒤 재시도한다.
+
+    cap_final=True: 불량 최종 세션을 end에서 제외(종목 최대 보존, 최신일 손실).
+    cap_final=False: end를 유지하고 불량 최종 바를 가진 종목을 드롭(최신일 보존).
+    evaluate_scenarios는 minimum_backtest_years 때문에 최신일 보존이 필요하다.
+    """
     notes: list[str] = []
     loaded: dict[str, list[DailyBar]] = {}
     for symbol in symbols:
         loaded[symbol] = list(provider.daily_bars(symbol, start, raw_end))
 
-    # 꼬리의 불량 세션(미완료 최종 세션 등)을 end에서 제외.
-    bad_dates = {
-        bar.session_date
-        for bars in loaded.values()
-        for bar in bars
-        if not _ohlc_ok(bar)
-    }
-    calendar_sessions = [s for s in calendar.sessions(start, raw_end)]
     end = raw_end
-    while calendar_sessions and end in bad_dates:
-        calendar_sessions.pop()
-        end = calendar_sessions[-1] if calendar_sessions else start
-    if end != raw_end:
-        notes.append(f"end capped {raw_end} -> {end} (미완료/불량 최종 세션 제외)")
+    if cap_final:
+        # 꼬리의 불량 세션(미완료 최종 세션 등)을 end에서 제외.
+        bad_dates = {
+            bar.session_date
+            for bars in loaded.values()
+            for bar in bars
+            if not _ohlc_ok(bar)
+        }
+        calendar_sessions = [s for s in calendar.sessions(start, raw_end)]
+        while calendar_sessions and end in bad_dates:
+            calendar_sessions.pop()
+            end = calendar_sessions[-1] if calendar_sessions else start
+        if end != raw_end:
+            notes.append(f"end capped {raw_end} -> {end} (미완료/불량 최종 세션 제외)")
 
     surviving = list(symbols)
     for _ in range(len(symbols) + 1):
@@ -204,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     selected = list(dict.fromkeys([*selected_main, *high_candidates]))
 
     snapshot, surviving, end, notes = _build_clean_snapshot(
-        provider, calendar, selected, start=start, raw_end=raw_end
+        provider, calendar, selected, start=start, raw_end=raw_end, cap_final=args.quick
     )
     surviving_set = set(surviving)
     main_symbols = {s for s in selected_main if s in surviving_set}
