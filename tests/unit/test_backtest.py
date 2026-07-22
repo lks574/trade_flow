@@ -67,6 +67,22 @@ def test_backtest_executes_close_signal_at_next_open_with_costs() -> None:
     assert result.equity_curve[-1].cash >= 0
 
 
+def test_backtest_blocks_buys_when_regime_state_missing() -> None:
+    # 오버레이 요청(빈 dict)했으나 매매 세션에 레짐 상태가 없으면 fail-closed로 매수 차단.
+    config = load_config("configs/strategy.toml")
+
+    result = run_backtest(
+        _snapshot(),
+        config,
+        main_symbols=["A"],
+        initial_cash=Decimal("20000000"),
+        transaction_cost_bps=15,
+        regime_states={},
+    )
+
+    assert result.trades == ()
+
+
 def test_backtest_uses_point_in_time_universe_membership() -> None:
     config = load_config("configs/strategy.toml")
     base = _snapshot()

@@ -218,10 +218,15 @@ def run_backtest(
             main_symbols=main_set,
             high_volatility_symbols=high_set,
         )
-        state = (regime_states or {}).get(
-            session_date,
-            RegimeState(session_date, False, True, 0, ()),
-        )
+        if regime_states is None:
+            # ponytail: None = 레짐 오버레이 미요청(연구/메커니즘용). 오버레이를 요청한
+            # 경우(dict) 세션 누락은 데이터 공백이므로 fail-closed로 신규 매수를 막는다.
+            state = RegimeState(session_date, False, True, 0, ())
+        else:
+            state = regime_states.get(
+                session_date,
+                RegimeState(session_date, True, False, 0, ("regime_missing",)),
+            )
         account = AccountSnapshot(
             account_hash="backtest",
             captured_at=datetime.combine(session_date, time.min, tzinfo=UTC),
