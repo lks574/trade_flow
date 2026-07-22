@@ -37,6 +37,9 @@ def _adjust(value: Decimal, divisor: Decimal) -> Decimal:
 
 
 def _bars_from_history(symbol: str, history, fetched_at: datetime) -> list[DailyBar]:
+    # yfinance emits NaN rows on boundary/no-trade days; drop them so they never
+    # reach the DB (a NaN bar is not a valid observation).
+    history = history.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
     ratios = [_dec(value) if value else Decimal(1) for value in history["Stock Splits"]]
     divisors = split_adjustment_divisors(ratios)
     bars: list[DailyBar] = []

@@ -1,3 +1,2517 @@
 grade = "C"
-description = "Phase 1 bootstrap universe; replace with reviewed symbols in Milestone 2"
-symbols = []
+description = "S&P 500 constituents from Wikipedia (current snapshot, survivorship-biased); refreshed 2026-07-22"
+
+[[symbols]]
+symbol = "A"
+provider_symbol = "A"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AAPL"
+provider_symbol = "AAPL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ABBV"
+provider_symbol = "ABBV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ABNB"
+provider_symbol = "ABNB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ABT"
+provider_symbol = "ABT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ACGL"
+provider_symbol = "ACGL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ACN"
+provider_symbol = "ACN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ADBE"
+provider_symbol = "ADBE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ADI"
+provider_symbol = "ADI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ADM"
+provider_symbol = "ADM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ADP"
+provider_symbol = "ADP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ADSK"
+provider_symbol = "ADSK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AEE"
+provider_symbol = "AEE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AEP"
+provider_symbol = "AEP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AES"
+provider_symbol = "AES"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AFL"
+provider_symbol = "AFL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AIG"
+provider_symbol = "AIG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AIZ"
+provider_symbol = "AIZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AJG"
+provider_symbol = "AJG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AKAM"
+provider_symbol = "AKAM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ALB"
+provider_symbol = "ALB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ALGN"
+provider_symbol = "ALGN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ALL"
+provider_symbol = "ALL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ALLE"
+provider_symbol = "ALLE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMAT"
+provider_symbol = "AMAT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMCR"
+provider_symbol = "AMCR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMD"
+provider_symbol = "AMD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AME"
+provider_symbol = "AME"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMGN"
+provider_symbol = "AMGN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMP"
+provider_symbol = "AMP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMT"
+provider_symbol = "AMT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AMZN"
+provider_symbol = "AMZN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ANET"
+provider_symbol = "ANET"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AON"
+provider_symbol = "AON"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AOS"
+provider_symbol = "AOS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "APA"
+provider_symbol = "APA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "APD"
+provider_symbol = "APD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "APH"
+provider_symbol = "APH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "APO"
+provider_symbol = "APO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "APP"
+provider_symbol = "APP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "APTV"
+provider_symbol = "APTV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ARE"
+provider_symbol = "ARE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ARES"
+provider_symbol = "ARES"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ATO"
+provider_symbol = "ATO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AVB"
+provider_symbol = "AVB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AVGO"
+provider_symbol = "AVGO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AVY"
+provider_symbol = "AVY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AWK"
+provider_symbol = "AWK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AXON"
+provider_symbol = "AXON"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AXP"
+provider_symbol = "AXP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "AZO"
+provider_symbol = "AZO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BA"
+provider_symbol = "BA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BAC"
+provider_symbol = "BAC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BALL"
+provider_symbol = "BALL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BAX"
+provider_symbol = "BAX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BBY"
+provider_symbol = "BBY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BDX"
+provider_symbol = "BDX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BEN"
+provider_symbol = "BEN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BF.B"
+provider_symbol = "BF-B"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BG"
+provider_symbol = "BG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BIIB"
+provider_symbol = "BIIB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BKNG"
+provider_symbol = "BKNG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BKR"
+provider_symbol = "BKR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BLDR"
+provider_symbol = "BLDR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BLK"
+provider_symbol = "BLK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BMY"
+provider_symbol = "BMY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BNY"
+provider_symbol = "BNY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BR"
+provider_symbol = "BR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BRK.B"
+provider_symbol = "BRK-B"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BRO"
+provider_symbol = "BRO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BSX"
+provider_symbol = "BSX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BX"
+provider_symbol = "BX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "BXP"
+provider_symbol = "BXP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "C"
+provider_symbol = "C"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CAH"
+provider_symbol = "CAH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CARR"
+provider_symbol = "CARR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CASY"
+provider_symbol = "CASY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CAT"
+provider_symbol = "CAT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CB"
+provider_symbol = "CB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CBOE"
+provider_symbol = "CBOE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CBRE"
+provider_symbol = "CBRE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CCI"
+provider_symbol = "CCI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CCL"
+provider_symbol = "CCL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CDNS"
+provider_symbol = "CDNS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CDW"
+provider_symbol = "CDW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CEG"
+provider_symbol = "CEG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CF"
+provider_symbol = "CF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CFG"
+provider_symbol = "CFG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CHD"
+provider_symbol = "CHD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CHRW"
+provider_symbol = "CHRW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CHTR"
+provider_symbol = "CHTR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CI"
+provider_symbol = "CI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CIEN"
+provider_symbol = "CIEN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CINF"
+provider_symbol = "CINF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CL"
+provider_symbol = "CL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CLX"
+provider_symbol = "CLX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CMCSA"
+provider_symbol = "CMCSA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CME"
+provider_symbol = "CME"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CMG"
+provider_symbol = "CMG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CMI"
+provider_symbol = "CMI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CMS"
+provider_symbol = "CMS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CNC"
+provider_symbol = "CNC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CNP"
+provider_symbol = "CNP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COF"
+provider_symbol = "COF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COHR"
+provider_symbol = "COHR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COIN"
+provider_symbol = "COIN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COO"
+provider_symbol = "COO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COP"
+provider_symbol = "COP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COR"
+provider_symbol = "COR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "COST"
+provider_symbol = "COST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CPAY"
+provider_symbol = "CPAY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CPRT"
+provider_symbol = "CPRT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CPT"
+provider_symbol = "CPT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CRH"
+provider_symbol = "CRH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CRL"
+provider_symbol = "CRL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CRM"
+provider_symbol = "CRM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CRWD"
+provider_symbol = "CRWD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CSCO"
+provider_symbol = "CSCO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CSGP"
+provider_symbol = "CSGP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CSX"
+provider_symbol = "CSX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CTAS"
+provider_symbol = "CTAS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CTSH"
+provider_symbol = "CTSH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CTVA"
+provider_symbol = "CTVA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CVNA"
+provider_symbol = "CVNA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CVS"
+provider_symbol = "CVS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "CVX"
+provider_symbol = "CVX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "D"
+provider_symbol = "D"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DAL"
+provider_symbol = "DAL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DASH"
+provider_symbol = "DASH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DD"
+provider_symbol = "DD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DDOG"
+provider_symbol = "DDOG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DE"
+provider_symbol = "DE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DECK"
+provider_symbol = "DECK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DELL"
+provider_symbol = "DELL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DG"
+provider_symbol = "DG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DGX"
+provider_symbol = "DGX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DHI"
+provider_symbol = "DHI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DHR"
+provider_symbol = "DHR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DIS"
+provider_symbol = "DIS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DLR"
+provider_symbol = "DLR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DLTR"
+provider_symbol = "DLTR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DOC"
+provider_symbol = "DOC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DOV"
+provider_symbol = "DOV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DOW"
+provider_symbol = "DOW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DPZ"
+provider_symbol = "DPZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DRI"
+provider_symbol = "DRI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DTE"
+provider_symbol = "DTE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DUK"
+provider_symbol = "DUK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DVA"
+provider_symbol = "DVA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DVN"
+provider_symbol = "DVN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "DXCM"
+provider_symbol = "DXCM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EA"
+provider_symbol = "EA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EBAY"
+provider_symbol = "EBAY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ECHO"
+provider_symbol = "ECHO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ECL"
+provider_symbol = "ECL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ED"
+provider_symbol = "ED"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EFX"
+provider_symbol = "EFX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EG"
+provider_symbol = "EG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EIX"
+provider_symbol = "EIX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EL"
+provider_symbol = "EL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ELV"
+provider_symbol = "ELV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EME"
+provider_symbol = "EME"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EMR"
+provider_symbol = "EMR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EOG"
+provider_symbol = "EOG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EQIX"
+provider_symbol = "EQIX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EQR"
+provider_symbol = "EQR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EQT"
+provider_symbol = "EQT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ERIE"
+provider_symbol = "ERIE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ES"
+provider_symbol = "ES"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ESS"
+provider_symbol = "ESS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ETN"
+provider_symbol = "ETN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ETR"
+provider_symbol = "ETR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EVRG"
+provider_symbol = "EVRG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EW"
+provider_symbol = "EW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EXC"
+provider_symbol = "EXC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EXE"
+provider_symbol = "EXE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EXPD"
+provider_symbol = "EXPD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EXPE"
+provider_symbol = "EXPE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "EXR"
+provider_symbol = "EXR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "F"
+provider_symbol = "F"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FANG"
+provider_symbol = "FANG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FAST"
+provider_symbol = "FAST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FCX"
+provider_symbol = "FCX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FDS"
+provider_symbol = "FDS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FDX"
+provider_symbol = "FDX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FDXF"
+provider_symbol = "FDXF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FE"
+provider_symbol = "FE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FFIV"
+provider_symbol = "FFIV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FICO"
+provider_symbol = "FICO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FIS"
+provider_symbol = "FIS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FISV"
+provider_symbol = "FISV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FITB"
+provider_symbol = "FITB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FIX"
+provider_symbol = "FIX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FLEX"
+provider_symbol = "FLEX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FOX"
+provider_symbol = "FOX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FOXA"
+provider_symbol = "FOXA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FRT"
+provider_symbol = "FRT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FSLR"
+provider_symbol = "FSLR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FTNT"
+provider_symbol = "FTNT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "FTV"
+provider_symbol = "FTV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GD"
+provider_symbol = "GD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GDDY"
+provider_symbol = "GDDY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GE"
+provider_symbol = "GE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GEHC"
+provider_symbol = "GEHC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GEN"
+provider_symbol = "GEN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GEV"
+provider_symbol = "GEV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GILD"
+provider_symbol = "GILD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GIS"
+provider_symbol = "GIS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GL"
+provider_symbol = "GL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GLW"
+provider_symbol = "GLW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GM"
+provider_symbol = "GM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GNRC"
+provider_symbol = "GNRC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GOOG"
+provider_symbol = "GOOG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GOOGL"
+provider_symbol = "GOOGL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GPC"
+provider_symbol = "GPC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GPN"
+provider_symbol = "GPN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GRMN"
+provider_symbol = "GRMN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GS"
+provider_symbol = "GS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "GWW"
+provider_symbol = "GWW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HAL"
+provider_symbol = "HAL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HAS"
+provider_symbol = "HAS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HBAN"
+provider_symbol = "HBAN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HCA"
+provider_symbol = "HCA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HD"
+provider_symbol = "HD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HIG"
+provider_symbol = "HIG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HII"
+provider_symbol = "HII"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HLT"
+provider_symbol = "HLT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HON"
+provider_symbol = "HON"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HONA"
+provider_symbol = "HONA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HOOD"
+provider_symbol = "HOOD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HPE"
+provider_symbol = "HPE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HPQ"
+provider_symbol = "HPQ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HRL"
+provider_symbol = "HRL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HSIC"
+provider_symbol = "HSIC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HST"
+provider_symbol = "HST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HSY"
+provider_symbol = "HSY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HUBB"
+provider_symbol = "HUBB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HUM"
+provider_symbol = "HUM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "HWM"
+provider_symbol = "HWM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IBKR"
+provider_symbol = "IBKR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IBM"
+provider_symbol = "IBM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ICE"
+provider_symbol = "ICE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IDXX"
+provider_symbol = "IDXX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IEX"
+provider_symbol = "IEX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IFF"
+provider_symbol = "IFF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "INCY"
+provider_symbol = "INCY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "INTC"
+provider_symbol = "INTC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "INTU"
+provider_symbol = "INTU"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "INVH"
+provider_symbol = "INVH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IP"
+provider_symbol = "IP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IQV"
+provider_symbol = "IQV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IR"
+provider_symbol = "IR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IRM"
+provider_symbol = "IRM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ISRG"
+provider_symbol = "ISRG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IT"
+provider_symbol = "IT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ITW"
+provider_symbol = "ITW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "IVZ"
+provider_symbol = "IVZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "J"
+provider_symbol = "J"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "JBHT"
+provider_symbol = "JBHT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "JBL"
+provider_symbol = "JBL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "JCI"
+provider_symbol = "JCI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "JKHY"
+provider_symbol = "JKHY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "JNJ"
+provider_symbol = "JNJ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "JPM"
+provider_symbol = "JPM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KDP"
+provider_symbol = "KDP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KEY"
+provider_symbol = "KEY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KEYS"
+provider_symbol = "KEYS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KHC"
+provider_symbol = "KHC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KIM"
+provider_symbol = "KIM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KKR"
+provider_symbol = "KKR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KLAC"
+provider_symbol = "KLAC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KMB"
+provider_symbol = "KMB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KMI"
+provider_symbol = "KMI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KO"
+provider_symbol = "KO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KR"
+provider_symbol = "KR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "KVUE"
+provider_symbol = "KVUE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "L"
+provider_symbol = "L"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LDOS"
+provider_symbol = "LDOS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LEN"
+provider_symbol = "LEN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LH"
+provider_symbol = "LH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LHX"
+provider_symbol = "LHX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LII"
+provider_symbol = "LII"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LIN"
+provider_symbol = "LIN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LITE"
+provider_symbol = "LITE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LLY"
+provider_symbol = "LLY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LMT"
+provider_symbol = "LMT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LNT"
+provider_symbol = "LNT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LOW"
+provider_symbol = "LOW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LRCX"
+provider_symbol = "LRCX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LULU"
+provider_symbol = "LULU"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LUV"
+provider_symbol = "LUV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LVS"
+provider_symbol = "LVS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LYB"
+provider_symbol = "LYB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "LYV"
+provider_symbol = "LYV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MA"
+provider_symbol = "MA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MAA"
+provider_symbol = "MAA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MAR"
+provider_symbol = "MAR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MAS"
+provider_symbol = "MAS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MCD"
+provider_symbol = "MCD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MCHP"
+provider_symbol = "MCHP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MCK"
+provider_symbol = "MCK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MCO"
+provider_symbol = "MCO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MDLZ"
+provider_symbol = "MDLZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MDT"
+provider_symbol = "MDT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MET"
+provider_symbol = "MET"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "META"
+provider_symbol = "META"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MGM"
+provider_symbol = "MGM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MKC"
+provider_symbol = "MKC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MLM"
+provider_symbol = "MLM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MMM"
+provider_symbol = "MMM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MNST"
+provider_symbol = "MNST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MO"
+provider_symbol = "MO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MOS"
+provider_symbol = "MOS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MPC"
+provider_symbol = "MPC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MPWR"
+provider_symbol = "MPWR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MRK"
+provider_symbol = "MRK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MRNA"
+provider_symbol = "MRNA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MRSH"
+provider_symbol = "MRSH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MRVL"
+provider_symbol = "MRVL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MS"
+provider_symbol = "MS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MSCI"
+provider_symbol = "MSCI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MSFT"
+provider_symbol = "MSFT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MSI"
+provider_symbol = "MSI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MTB"
+provider_symbol = "MTB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MTD"
+provider_symbol = "MTD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "MU"
+provider_symbol = "MU"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NCLH"
+provider_symbol = "NCLH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NDAQ"
+provider_symbol = "NDAQ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NDSN"
+provider_symbol = "NDSN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NEE"
+provider_symbol = "NEE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NEM"
+provider_symbol = "NEM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NFLX"
+provider_symbol = "NFLX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NI"
+provider_symbol = "NI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NKE"
+provider_symbol = "NKE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NOC"
+provider_symbol = "NOC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NOW"
+provider_symbol = "NOW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NRG"
+provider_symbol = "NRG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NSC"
+provider_symbol = "NSC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NTAP"
+provider_symbol = "NTAP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NTRS"
+provider_symbol = "NTRS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NUE"
+provider_symbol = "NUE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NVDA"
+provider_symbol = "NVDA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NVR"
+provider_symbol = "NVR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NWS"
+provider_symbol = "NWS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NWSA"
+provider_symbol = "NWSA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "NXPI"
+provider_symbol = "NXPI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "O"
+provider_symbol = "O"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ODFL"
+provider_symbol = "ODFL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "OKE"
+provider_symbol = "OKE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "OMC"
+provider_symbol = "OMC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ON"
+provider_symbol = "ON"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ORCL"
+provider_symbol = "ORCL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ORLY"
+provider_symbol = "ORLY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "OTIS"
+provider_symbol = "OTIS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "OXY"
+provider_symbol = "OXY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PANW"
+provider_symbol = "PANW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PAYX"
+provider_symbol = "PAYX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PCAR"
+provider_symbol = "PCAR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PCG"
+provider_symbol = "PCG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PEG"
+provider_symbol = "PEG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PEP"
+provider_symbol = "PEP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PFE"
+provider_symbol = "PFE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PFG"
+provider_symbol = "PFG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PG"
+provider_symbol = "PG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PGR"
+provider_symbol = "PGR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PH"
+provider_symbol = "PH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PHM"
+provider_symbol = "PHM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PKG"
+provider_symbol = "PKG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PLD"
+provider_symbol = "PLD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PLTR"
+provider_symbol = "PLTR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PM"
+provider_symbol = "PM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PNC"
+provider_symbol = "PNC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PNR"
+provider_symbol = "PNR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PNW"
+provider_symbol = "PNW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PODD"
+provider_symbol = "PODD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PPG"
+provider_symbol = "PPG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PPL"
+provider_symbol = "PPL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PRU"
+provider_symbol = "PRU"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PSA"
+provider_symbol = "PSA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PSKY"
+provider_symbol = "PSKY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PSX"
+provider_symbol = "PSX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PTC"
+provider_symbol = "PTC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PWR"
+provider_symbol = "PWR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "PYPL"
+provider_symbol = "PYPL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "Q"
+provider_symbol = "Q"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "QCOM"
+provider_symbol = "QCOM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RCL"
+provider_symbol = "RCL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "REG"
+provider_symbol = "REG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "REGN"
+provider_symbol = "REGN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RF"
+provider_symbol = "RF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RJF"
+provider_symbol = "RJF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RL"
+provider_symbol = "RL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RMD"
+provider_symbol = "RMD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ROK"
+provider_symbol = "ROK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ROL"
+provider_symbol = "ROL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ROP"
+provider_symbol = "ROP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ROST"
+provider_symbol = "ROST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RSG"
+provider_symbol = "RSG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RTX"
+provider_symbol = "RTX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "RVTY"
+provider_symbol = "RVTY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SBAC"
+provider_symbol = "SBAC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SBUX"
+provider_symbol = "SBUX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SCHW"
+provider_symbol = "SCHW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SHW"
+provider_symbol = "SHW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SJM"
+provider_symbol = "SJM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SLB"
+provider_symbol = "SLB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SMCI"
+provider_symbol = "SMCI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SNA"
+provider_symbol = "SNA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SNDK"
+provider_symbol = "SNDK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SNPS"
+provider_symbol = "SNPS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SO"
+provider_symbol = "SO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SOLV"
+provider_symbol = "SOLV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SPG"
+provider_symbol = "SPG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SPGI"
+provider_symbol = "SPGI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SRE"
+provider_symbol = "SRE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "STE"
+provider_symbol = "STE"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "STLD"
+provider_symbol = "STLD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "STT"
+provider_symbol = "STT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "STX"
+provider_symbol = "STX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "STZ"
+provider_symbol = "STZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SW"
+provider_symbol = "SW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SWK"
+provider_symbol = "SWK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SWKS"
+provider_symbol = "SWKS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SYF"
+provider_symbol = "SYF"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SYK"
+provider_symbol = "SYK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "SYY"
+provider_symbol = "SYY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "T"
+provider_symbol = "T"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TAP"
+provider_symbol = "TAP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TDG"
+provider_symbol = "TDG"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TDY"
+provider_symbol = "TDY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TECH"
+provider_symbol = "TECH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TEL"
+provider_symbol = "TEL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TER"
+provider_symbol = "TER"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TFC"
+provider_symbol = "TFC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TGT"
+provider_symbol = "TGT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TJX"
+provider_symbol = "TJX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TKO"
+provider_symbol = "TKO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TMO"
+provider_symbol = "TMO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TMUS"
+provider_symbol = "TMUS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TPL"
+provider_symbol = "TPL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TPR"
+provider_symbol = "TPR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TRGP"
+provider_symbol = "TRGP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TRMB"
+provider_symbol = "TRMB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TROW"
+provider_symbol = "TROW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TRV"
+provider_symbol = "TRV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TSCO"
+provider_symbol = "TSCO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TSLA"
+provider_symbol = "TSLA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TSN"
+provider_symbol = "TSN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TT"
+provider_symbol = "TT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TTD"
+provider_symbol = "TTD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TTWO"
+provider_symbol = "TTWO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TXN"
+provider_symbol = "TXN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TXT"
+provider_symbol = "TXT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "TYL"
+provider_symbol = "TYL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UAL"
+provider_symbol = "UAL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UBER"
+provider_symbol = "UBER"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UDR"
+provider_symbol = "UDR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UHS"
+provider_symbol = "UHS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ULTA"
+provider_symbol = "ULTA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UNH"
+provider_symbol = "UNH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UNP"
+provider_symbol = "UNP"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "UPS"
+provider_symbol = "UPS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "URI"
+provider_symbol = "URI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "USB"
+provider_symbol = "USB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "V"
+provider_symbol = "V"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VEEV"
+provider_symbol = "VEEV"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VICI"
+provider_symbol = "VICI"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VLO"
+provider_symbol = "VLO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VLTO"
+provider_symbol = "VLTO"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VMC"
+provider_symbol = "VMC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VRSK"
+provider_symbol = "VRSK"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VRSN"
+provider_symbol = "VRSN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VRT"
+provider_symbol = "VRT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VRTX"
+provider_symbol = "VRTX"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VST"
+provider_symbol = "VST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VTR"
+provider_symbol = "VTR"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VTRS"
+provider_symbol = "VTRS"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "VZ"
+provider_symbol = "VZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WAB"
+provider_symbol = "WAB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WAT"
+provider_symbol = "WAT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WBD"
+provider_symbol = "WBD"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WDAY"
+provider_symbol = "WDAY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WDC"
+provider_symbol = "WDC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WEC"
+provider_symbol = "WEC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WELL"
+provider_symbol = "WELL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WFC"
+provider_symbol = "WFC"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WM"
+provider_symbol = "WM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WMB"
+provider_symbol = "WMB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WMT"
+provider_symbol = "WMT"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WRB"
+provider_symbol = "WRB"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WSM"
+provider_symbol = "WSM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WST"
+provider_symbol = "WST"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WTW"
+provider_symbol = "WTW"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WY"
+provider_symbol = "WY"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "WYNN"
+provider_symbol = "WYNN"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "XEL"
+provider_symbol = "XEL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "XOM"
+provider_symbol = "XOM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "XYL"
+provider_symbol = "XYL"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "XYZ"
+provider_symbol = "XYZ"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "YUM"
+provider_symbol = "YUM"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ZBH"
+provider_symbol = "ZBH"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ZBRA"
+provider_symbol = "ZBRA"
+source = "wikipedia-sp500"
+
+[[symbols]]
+symbol = "ZTS"
+provider_symbol = "ZTS"
+source = "wikipedia-sp500"
