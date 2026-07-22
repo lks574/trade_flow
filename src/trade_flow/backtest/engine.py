@@ -167,6 +167,7 @@ def run_backtest(
     regime_states: Mapping[date, RegimeState] | None = None,
     regime_policy: RegimePolicy = RegimePolicy.BUY_BLOCK,
     rebalance_band: Decimal = Decimal(0),
+    selection_hysteresis: int = 0,
 ) -> BacktestResult:
     snapshot.quality_report.require_valid()
     if initial_cash <= 0 or transaction_cost_bps < 0:
@@ -256,6 +257,10 @@ def run_backtest(
             main_set=main_set,
             high_volatility_set=high_volatility_set,
             as_of=session_date,
+            held_symbols=frozenset(
+                symbol for symbol, position in positions.items() if position.quantity > 0
+            ),
+            selection_hysteresis=selection_hysteresis,
         )
         if regime_states is None:
             # ponytail: None = 레짐 오버레이 미요청(연구/메커니즘용). 오버레이를 요청한

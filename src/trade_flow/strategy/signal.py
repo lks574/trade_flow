@@ -87,6 +87,21 @@ def _ranked_symbols(scores: Mapping[str, FactorScore], candidates: Iterable[str]
     )
 
 
+def _select_ranked(
+    ranked: list[str], held: frozenset[str], count: int, hysteresis: int
+) -> list[str]:
+    """상위 count개를 고른다. hysteresis>0이면 보유 종목이 상위 (count+hysteresis) 이내인
+    동안은 유지하고 남은 자리만 신규 상위 종목으로 채워 선정 로테이션을 줄인다(연구 토글).
+    hysteresis=0(기본)이면 단순 상위 count개 = 기존 동작."""
+    if hysteresis <= 0 or not held:
+        return ranked[:count]
+    exit_rank = count + hysteresis
+    kept = [symbol for symbol in ranked[:exit_rank] if symbol in held][:count]
+    kept_set = set(kept)
+    fills = [symbol for symbol in ranked if symbol not in kept_set]
+    return (kept + fills)[:count]
+
+
 def select_targets(
     raw: Mapping[str, tuple[Decimal, Decimal, Decimal, Decimal, Decimal]],
     exclusions: Mapping[str, str],
@@ -95,11 +110,16 @@ def select_targets(
     main_set: set[str],
     high_volatility_set: set[str],
     as_of: date,
+    held_symbols: frozenset[str] = frozenset(),
+    selection_hysteresis: int = 0,
 ) -> StrategyResult:
     """원시 팩터(raw)와 제외 사유(exclusions)로 점수·순위·목표 비중을 계산한다.
 
     실시간 경로(``signal``)와 백테스트 사전계산 경로가 동일하게 호출해 선정 로직의
     분기를 원천 차단한다. ``raw[symbol] = (momentum, trend, rsi, macd, dollar_volume)``.
+
+    ``selection_hysteresis``(연구 토글, 기본 0=기존 동작)는 보유 종목(``held_symbols``)이
+    상위 (count+hysteresis) 이내인 동안 유지해 선정 로테이션을 줄인다.
     """
     momentum_ranks = percentile_ranks({symbol: values[0] for symbol, values in raw.items()})
     weights = config.factor_weights
@@ -124,14 +144,24 @@ def select_targets(
         )
 
     target_weights: dict[str, Decimal] = {}
-    main_ranked = _ranked_symbols(scores, main_set)[: config.main_count]
+    main_ranked = _select_ranked(
+        _ranked_symbols(scores, main_set),
+        held_symbols & main_set,
+        config.main_count,
+        selection_hysteresis,
+    )
     main_weight = min(
         config.main_target_weight / Decimal(config.main_count),
         config.general_symbol_weight_cap,
     )
     target_weights.update({symbol: main_weight for symbol in main_ranked})
 
-    high_ranked = _ranked_symbols(scores, high_volatility_set)[: config.high_volatility_max_symbols]
+    high_ranked = _select_ranked(
+        _ranked_symbols(scores, high_volatility_set),
+        held_symbols & high_volatility_set,
+        config.high_volatility_max_symbols,
+        selection_hysteresis,
+    )[: config.high_volatility_max_symbols]
     high_weight = min(
         config.high_volatility_symbol_cap,
         config.high_volatility_total_cap / Decimal(config.high_volatility_max_symbols),

@@ -169,6 +169,12 @@ def main(argv: list[str] | None = None) -> int:
         default="0",
         help="리서치 토글(quick 모드): 비중 드리프트가 이 값 이내면 재조정 생략",
     )
+    parser.add_argument(
+        "--hysteresis",
+        type=int,
+        default=0,
+        help="리서치 토글(quick 모드): 보유 종목을 top-(N+이값) 이내면 유지(선정 로테이션 감소)",
+    )
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
 
@@ -228,6 +234,7 @@ def main(argv: list[str] | None = None) -> int:
             regime_states=regime_states,
             regime_policy=RegimePolicy.BUY_BLOCK,
             rebalance_band=Decimal(args.rebalance_band),
+            selection_hysteresis=args.hysteresis,
         )
         metrics = calculate_metrics(result)
         print("\n[quick 15bp/BUY_BLOCK]")

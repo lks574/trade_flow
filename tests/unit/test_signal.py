@@ -93,3 +93,21 @@ def test_signal_keeps_unallocated_weight_in_cash() -> None:
 
     assert result.target_weights == {"ONLY": Decimal("0.176")}
     assert result.cash_weight == Decimal("0.824")
+
+
+def test_select_ranked_hysteresis_retains_held_within_buffer() -> None:
+    from trade_flow.strategy.signal import _select_ranked
+
+    ranked = ["A", "B", "C", "D", "E", "F"]
+
+    # hysteresis=0: 단순 상위 count.
+    assert _select_ranked(ranked, frozenset({"E"}), 3, 0) == ["A", "B", "C"]
+
+    # 보유 E가 상위 (3+2)=5 이내이면 유지하고 남은 자리를 신규 상위로 채운다.
+    assert _select_ranked(ranked, frozenset({"E"}), 3, 2) == ["E", "A", "B"]
+
+    # 보유 F가 버퍼(top-5) 밖이면 유지하지 않는다.
+    assert _select_ranked(ranked, frozenset({"F"}), 3, 2) == ["A", "B", "C"]
+
+    # 보유 종목이 없으면 hysteresis와 무관하게 상위 count.
+    assert _select_ranked(ranked, frozenset(), 3, 2) == ["A", "B", "C"]
