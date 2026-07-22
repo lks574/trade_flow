@@ -87,32 +87,20 @@ def _ranked_symbols(scores: Mapping[str, FactorScore], candidates: Iterable[str]
     )
 
 
-def signal(
-    snapshot: MarketDataSnapshot,
+def select_targets(
+    raw: Mapping[str, tuple[Decimal, Decimal, Decimal, Decimal, Decimal]],
+    exclusions: Mapping[str, str],
     config: StrategyConfig,
     *,
-    main_symbols: Iterable[str],
-    high_volatility_symbols: Iterable[str] = (),
+    main_set: set[str],
+    high_volatility_set: set[str],
+    as_of: date,
 ) -> StrategyResult:
-    snapshot.quality_report.require_valid()
-    grouped = _bars_by_symbol(snapshot)
-    main_set = set(main_symbols)
-    high_volatility_set = set(high_volatility_symbols) - main_set
-    requested = main_set | high_volatility_set
-    raw: dict[str, tuple[Decimal, Decimal, Decimal, Decimal, Decimal]] = {}
-    exclusions: dict[str, str] = {}
-    for symbol in sorted(requested):
-        bars = grouped.get(symbol, ())
-        factors = _raw_factors(bars, config)
-        if factors is None:
-            exclusions[symbol] = (
-                "insufficient_history"
-                if len(bars) < config.minimum_price_days
-                else "below_sma_long"
-            )
-            continue
-        raw[symbol] = factors
+    """원시 팩터(raw)와 제외 사유(exclusions)로 점수·순위·목표 비중을 계산한다.
 
+    실시간 경로(``signal``)와 백테스트 사전계산 경로가 동일하게 호출해 선정 로직의
+    분기를 원천 차단한다. ``raw[symbol] = (momentum, trend, rsi, macd, dollar_volume)``.
+    """
     momentum_ranks = percentile_ranks({symbol: values[0] for symbol, values in raw.items()})
     weights = config.factor_weights
     scores: dict[str, FactorScore] = {}
@@ -151,9 +139,44 @@ def signal(
     target_weights.update({symbol: high_weight for symbol in high_ranked})
     cash_weight = Decimal(1) - sum(target_weights.values())
     return StrategyResult(
-        as_of=snapshot.as_of,
+        as_of=as_of,
         target_weights=MappingProxyType(dict(sorted(target_weights.items()))),
         cash_weight=cash_weight,
         scores=MappingProxyType(dict(sorted(scores.items()))),
         exclusions=MappingProxyType(dict(sorted(exclusions.items()))),
+    )
+
+
+def signal(
+    snapshot: MarketDataSnapshot,
+    config: StrategyConfig,
+    *,
+    main_symbols: Iterable[str],
+    high_volatility_symbols: Iterable[str] = (),
+) -> StrategyResult:
+    snapshot.quality_report.require_valid()
+    grouped = _bars_by_symbol(snapshot)
+    main_set = set(main_symbols)
+    high_volatility_set = set(high_volatility_symbols) - main_set
+    requested = main_set | high_volatility_set
+    raw: dict[str, tuple[Decimal, Decimal, Decimal, Decimal, Decimal]] = {}
+    exclusions: dict[str, str] = {}
+    for symbol in sorted(requested):
+        bars = grouped.get(symbol, ())
+        factors = _raw_factors(bars, config)
+        if factors is None:
+            exclusions[symbol] = (
+                "insufficient_history"
+                if len(bars) < config.minimum_price_days
+                else "below_sma_long"
+            )
+            continue
+        raw[symbol] = factors
+    return select_targets(
+        raw,
+        exclusions,
+        config,
+        main_set=main_set,
+        high_volatility_set=high_volatility_set,
+        as_of=snapshot.as_of,
     )

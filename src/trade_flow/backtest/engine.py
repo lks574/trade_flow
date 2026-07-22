@@ -7,12 +7,13 @@ from datetime import UTC, date, datetime, time
 from decimal import ROUND_FLOOR, Decimal
 from types import MappingProxyType
 
-from trade_flow.data import DailyBar, MarketDataSnapshot, build_market_data_snapshot
+from trade_flow.backtest.precompute import precompute_factor_series
+from trade_flow.data import DailyBar, MarketDataSnapshot
 from trade_flow.data.universe import UniverseSpec
 from trade_flow.domain.config import AppConfig
 from trade_flow.execution.models import AccountSnapshot, PositionSnapshot
 from trade_flow.risk import RegimePolicy, RegimeState, apply_risk_policy
-from trade_flow.strategy import signal
+from trade_flow.strategy.signal import select_targets
 
 
 @dataclass(frozen=True)
@@ -171,10 +172,20 @@ def run_backtest(
     if initial_cash <= 0 or transaction_cost_bps < 0:
         raise ValueError("initial cash must be positive and transaction cost cannot be negative")
     bars_by_date: dict[date, dict[str, DailyBar]] = defaultdict(dict)
-    history: list[DailyBar] = []
     for bar in snapshot.prices:
         bars_by_date[bar.session_date][bar.symbol] = bar
     sessions = sorted(bars_by_date)
+    # 심볼별 팩터 시계열을 1회 사전계산한다(세션마다 전체 history 재계산 O(N^2) 회피).
+    # factor_series[symbol][i] == signal._raw_factors(symbol의 i+1번째까지 바) (bit-identical).
+    bars_by_symbol: dict[str, list[DailyBar]] = defaultdict(list)
+    for session_date in sessions:
+        for symbol, bar in bars_by_date[session_date].items():
+            bars_by_symbol[symbol].append(bar)
+    factor_series = {
+        symbol: precompute_factor_series(bars, config.strategy)
+        for symbol, bars in bars_by_symbol.items()
+    }
+    seen_count: dict[str, int] = defaultdict(int)
     positions: dict[str, Position] = {}
     cash = initial_cash
     pending: tuple[date, Mapping[str, Decimal]] | None = None
@@ -213,25 +224,38 @@ def run_backtest(
         )
         nav = cash + equity
         curve.append(EquityPoint(session_date, nav, cash, equity))
-        history.extend(today.values())
+        for symbol in today:
+            seen_count[symbol] += 1
 
         if session_index + 1 < config.strategy.minimum_price_days:
             previous_nav = nav
             continue
         main_set = _active_symbols(main_symbols, session_date)
         high_set = _active_symbols(high_volatility_symbols, session_date)
-        expected_symbols = main_set | high_set
-        sliced = build_market_data_snapshot(
-            history,
-            as_of=session_date,
-            expected_sessions=sessions[: session_index + 1],
-            expected_symbols=expected_symbols,
-        )
-        strategy_result = signal(
-            sliced,
+        high_volatility_set = high_set - main_set
+        requested = main_set | high_volatility_set
+        # signal()과 동일한 적격성 판정을 사전계산 시계열에서 조회한다. 세션별 스냅샷을
+        # 다시 만들지 않으므로 signal의 sub-snapshot require_valid는 생략된다(최상위
+        # 스냅샷이 이미 require_valid를 통과했으므로 유효 데이터에서는 결과 동일).
+        raw: dict[str, tuple[Decimal, Decimal, Decimal, Decimal, Decimal]] = {}
+        exclusions: dict[str, str] = {}
+        for symbol in sorted(requested):
+            count = seen_count.get(symbol, 0)
+            if count < config.strategy.minimum_price_days:
+                exclusions[symbol] = "insufficient_history"
+                continue
+            factors = factor_series[symbol][count - 1]
+            if factors is None:
+                exclusions[symbol] = "below_sma_long"
+            else:
+                raw[symbol] = factors
+        strategy_result = select_targets(
+            raw,
+            exclusions,
             config.strategy,
-            main_symbols=main_set,
-            high_volatility_symbols=high_set,
+            main_set=main_set,
+            high_volatility_set=high_volatility_set,
+            as_of=session_date,
         )
         if regime_states is None:
             # ponytail: None = 레짐 오버레이 미요청(연구/메커니즘용). 오버레이를 요청한
