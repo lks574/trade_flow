@@ -58,9 +58,15 @@ def build_regime_states(
         if item.vix_close is not None and item.vix_close > config.regime_vix_threshold:
             triggered = True
             reasons.append("vix")
-        if len(wti_history) > config.regime_wti_return_days:
+        # WTI 종가가 있는 세션에서만 20거래일 수익률을 계산한다. 종가가 없으면 위에서
+        # 이미 valid=False(invalid_wti)로 fail-closed 처리되므로 트리거 계산을 건너뛴다.
+        if (
+            item.wti_close is not None
+            and item.wti_close > 0
+            and len(wti_history) > config.regime_wti_return_days
+        ):
             previous_wti = wti_history[-(config.regime_wti_return_days + 1)]
-            wti_return = item.wti_close / previous_wti - Decimal(1)  # type: ignore[operator]
+            wti_return = wti_history[-1] / previous_wti - Decimal(1)
             if wti_return > config.regime_wti_return_threshold:
                 triggered = True
                 reasons.append("wti")

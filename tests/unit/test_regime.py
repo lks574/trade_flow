@@ -42,6 +42,24 @@ def test_invalid_regime_data_is_fail_safe() -> None:
     assert not state.valid
 
 
+def test_missing_wti_after_history_does_not_crash_and_fails_safe() -> None:
+    # WTI history가 20거래일을 넘긴 뒤 WTI 종가가 빠진 세션(실데이터에서 VIX/WTI
+    # 관측일 불일치로 발생). 크래시 없이 fail-closed(active, invalid) 여야 한다.
+    config = load_config("configs/strategy.toml").risk
+    start = date(2026, 1, 1)
+    inputs = [
+        RegimeInput(start + timedelta(days=index), Decimal(20), Decimal(100)) for index in range(25)
+    ]
+    gap_session = start + timedelta(days=25)
+    inputs.append(RegimeInput(gap_session, Decimal(20), None))
+
+    states = build_regime_states(inputs, config)
+
+    assert states[gap_session].active
+    assert not states[gap_session].valid
+    assert "invalid_wti" in states[gap_session].reasons
+
+
 def test_regime_policy_a_blocks_increases_and_b_caps_equity() -> None:
     config = load_config("configs/strategy.toml").risk
     state = RegimeState(date(2026, 1, 1), True, True, 0, ("vix",))
