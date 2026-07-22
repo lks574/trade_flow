@@ -83,6 +83,58 @@ def test_backtest_blocks_buys_when_regime_state_missing() -> None:
     assert result.trades == ()
 
 
+def _uptrend_snapshot(symbols: list[str], n_sessions: int):
+    # 상승 추세 + 소폭 진동. 모든 심볼이 적격(close>SMA200)이라 계속 보유되며,
+    # 일간 진동이 목표 주식수를 조금씩 흔들어 보유 종목 미세 재조정을 유발한다.
+    start = date(2024, 1, 1)
+    bars = []
+    for s_index, symbol in enumerate(symbols):
+        base = Decimal(100 + 20 * s_index)
+        prev = base
+        for i in range(n_sessions):
+            close = base + Decimal(i) / Decimal(2) + Decimal((i % 3) - 1)
+            open_price = prev
+            hi = max(open_price, close) + Decimal(1)
+            lo = min(open_price, close) - Decimal(1)
+            bars.append(
+                DailyBar(
+                    symbol=symbol,
+                    session_date=start + timedelta(days=i),
+                    open=open_price,
+                    high=hi,
+                    low=lo,
+                    close=close,
+                    split_adjusted_open=open_price,
+                    split_adjusted_high=hi,
+                    split_adjusted_low=lo,
+                    split_adjusted_close=close,
+                    volume=1000,
+                    cash_dividend=Decimal(0),
+                    source="fixture",
+                    fetched_at=datetime(2026, 1, 1, tzinfo=UTC),
+                )
+            )
+            prev = close
+    sessions = sorted({bar.session_date for bar in bars})
+    return build_market_data_snapshot(
+        bars, as_of=sessions[-1], expected_sessions=sessions, expected_symbols=symbols
+    )
+
+
+def test_rebalance_band_suppresses_within_band_micro_rebalancing() -> None:
+    config = load_config("configs/strategy.toml")
+    snapshot = _uptrend_snapshot(["A", "B", "C"], 212)
+
+    no_band = run_backtest(snapshot, config, main_symbols=["A", "B", "C"])
+    with_band = run_backtest(
+        snapshot, config, main_symbols=["A", "B", "C"], rebalance_band=Decimal("0.10")
+    )
+
+    # 밴드 없으면 매 세션 미세 재조정이 누적되고, 넉넉한 밴드는 진입 후 재조정을 억제한다.
+    assert len(with_band.trades) < len(no_band.trades)
+    assert len(with_band.trades) > 0  # 신규 진입은 밴드와 무관하게 체결
+
+
 def test_backtest_uses_point_in_time_universe_membership() -> None:
     config = load_config("configs/strategy.toml")
     base = _snapshot()

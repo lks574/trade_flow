@@ -163,6 +163,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--end", type=str, default=None, help="기본: DB 최신 세션")
     parser.add_argument("--initial-cash", type=str, default="20000000")
     parser.add_argument("--quick", action="store_true", help="단일 시나리오(15bp/BUY_BLOCK)만")
+    parser.add_argument(
+        "--rebalance-band",
+        type=str,
+        default="0",
+        help="리서치 토글(quick 모드): 비중 드리프트가 이 값 이내면 재조정 생략",
+    )
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
 
@@ -221,6 +227,7 @@ def main(argv: list[str] | None = None) -> int:
             transaction_cost_bps=15,
             regime_states=regime_states,
             regime_policy=RegimePolicy.BUY_BLOCK,
+            rebalance_band=Decimal(args.rebalance_band),
         )
         metrics = calculate_metrics(result)
         print("\n[quick 15bp/BUY_BLOCK]")

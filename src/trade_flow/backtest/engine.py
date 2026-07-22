@@ -64,6 +64,7 @@ def _execute_targets(
     cash: Decimal,
     positions: dict[str, Position],
     cost_rate: Decimal,
+    rebalance_band: Decimal = Decimal(0),
 ) -> tuple[Decimal, list[SimulatedTrade]]:
     nav = cash + sum(
         Decimal(position.quantity) * open_prices.get(symbol, position.average_cost)
@@ -79,6 +80,18 @@ def _execute_targets(
         for symbol in symbols
         if symbol in open_prices
     }
+    if rebalance_band > 0 and nav > 0:
+        # 리서치 토글: 보유 중이고 여전히 선정된 종목의 비중 드리프트가 밴드 이내이면
+        # 재조정을 생략(현재 수량 유지)한다. 신규 진입(현재 0)과 청산·손절(목표 0)은
+        # 항상 실행한다. band=0(기본)이면 기존 동작과 동일하다.
+        for symbol in list(desired):
+            current_quantity = positions.get(symbol, Position(0, Decimal(0))).quantity
+            target_weight = target_weights.get(symbol, Decimal(0))
+            if current_quantity <= 0 or target_weight <= 0:
+                continue
+            current_weight = Decimal(current_quantity) * open_prices[symbol] / nav
+            if abs(target_weight - current_weight) <= rebalance_band:
+                desired[symbol] = current_quantity
     trades: list[SimulatedTrade] = []
     for symbol in sorted(symbols):
         current = positions.get(symbol, Position(0, Decimal(0))).quantity
@@ -152,6 +165,7 @@ def run_backtest(
     transaction_cost_bps: int = 15,
     regime_states: Mapping[date, RegimeState] | None = None,
     regime_policy: RegimePolicy = RegimePolicy.BUY_BLOCK,
+    rebalance_band: Decimal = Decimal(0),
 ) -> BacktestResult:
     snapshot.quality_report.require_valid()
     if initial_cash <= 0 or transaction_cost_bps < 0:
@@ -187,6 +201,7 @@ def run_backtest(
                 cash=cash,
                 positions=positions,
                 cost_rate=cost_rate,
+                rebalance_band=rebalance_band,
             )
             trades.extend(executed)
             pending = None
