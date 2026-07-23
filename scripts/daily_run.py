@@ -43,9 +43,11 @@ from trade_flow.operations import (  # noqa: E402
 )
 from trade_flow.risk import RegimePolicy, apply_risk_policy, build_regime_states  # noqa: E402
 from trade_flow.safety import (  # noqa: E402
+    EnvironmentMismatchError,
     SafetyContext,
     kill_switch_active,
     load_runtime_config,
+    validate_environment_binding,
 )
 from trade_flow.strategy import signal  # noqa: E402
 
@@ -234,6 +236,15 @@ def _execute_live(
     print("  ⚠️ 실제 (모의) 주문을 제출합니다. 미국 정규장이 닫혀 있으면 '장종료'로 거부됩니다.")
     from datetime import datetime
 
+    # C-1: 자격증명(mock/real)↔런타임(paper/production) 결합을 어떤 주문·취소보다
+    # 먼저 검증한다. real 자격증명이 paper 게이트로 실주문에 도달하는 경로 차단.
+    runtime = load_runtime_config(args.runtime)
+    try:
+        validate_environment_binding(broker.credential_environment, runtime.environment)
+    except EnvironmentMismatchError as error:
+        print(f"[환경 불일치 — 중단] {error}", file=sys.stderr)
+        return 2
+
     # §3.5 재실행 복구: 시작 시 이전 미체결 주문을 조회·취소(이월 방지). 취소 실패 시
     # open_orders_reconciled=False로 후속 매수 차단(fail-closed).
     open_orders_reconciled, recon_msg = _reconcile_open_orders(broker)
@@ -252,8 +263,7 @@ def _execute_live(
         config_hash="live",
         universe_hash="live",
     )
-    # 런타임 안전설정(환경/게이트/킬스위치)을 코드가 아닌 configs/runtime.toml에서 로드.
-    runtime = load_runtime_config(args.runtime)
+    # 런타임 안전설정(환경/게이트/킬스위치)은 함수 진입 시 이미 로드·검증됨(C-1).
     kill = kill_switch_active(runtime, project_root=Path.cwd())
     notifier: Notifier = LogNotifier(args.notify_log)
     telegram = TelegramNotifier.from_env()

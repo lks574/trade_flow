@@ -15,9 +15,16 @@ from trade_flow.safety.release import (
     assess_paper_readiness,
     assess_production_readiness,
 )
-from trade_flow.safety.runtime import RuntimeConfig, kill_switch_active, load_runtime_config
+from trade_flow.safety.runtime import (
+    EnvironmentMismatchError,
+    RuntimeConfig,
+    kill_switch_active,
+    load_runtime_config,
+    validate_environment_binding,
+)
 
 __all__ = [
+    "EnvironmentMismatchError",
     "ExecutionEnvironment",
     "ExecutionPermit",
     "PaperSessionResult",
@@ -32,4 +39,5 @@ __all__ = [
     "authorize_execution",
     "kill_switch_active",
     "load_runtime_config",
+    "validate_environment_binding",
 ]

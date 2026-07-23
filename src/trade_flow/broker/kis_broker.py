@@ -59,6 +59,8 @@ class KisBroker:
         self._poll_interval = poll_interval_seconds
         cred = client._cred  # noqa: SLF001
         self._account_hash = f"kis-{cred.environment}-{cred.account}"
+        # 자격증명 환경(mock/real). 런타임(paper/production) 결합 검증(C-1)에 쓴다.
+        self.credential_environment = cred.environment
         # 제출한 주문의 컨텍스트(취소·조회에 필요). ODNO -> 주문 정보.
         # KIS는 사용자 정의 주문ID를 지원하지 않아 프로세스 내 멱등성/취소를 위해 유지한다.
         self._orders: dict[str, dict[str, object]] = {}

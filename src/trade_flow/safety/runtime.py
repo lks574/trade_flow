@@ -48,3 +48,35 @@ def kill_switch_active(config: RuntimeConfig, *, project_root: Path) -> bool:
     path = config.kill_switch_path
     resolved = path if path.is_absolute() else project_root / path
     return resolved.exists()
+
+
+class EnvironmentMismatchError(RuntimeError):
+    """KIS 자격증명(mock/real)과 런타임(paper/production)이 결합 규칙을 위반."""
+
+
+_ENVIRONMENT_BINDING: dict[str, ExecutionEnvironment] = {
+    "mock": ExecutionEnvironment.PAPER,
+    "real": ExecutionEnvironment.PRODUCTION,
+}
+
+
+def validate_environment_binding(
+    credential_environment: str, runtime_environment: ExecutionEnvironment
+) -> None:
+    """자격증명↔런타임 강제 매핑: mock↔paper, real↔production (교차리뷰 C-1).
+
+    real 자격증명이 paper 런타임으로 실행되면 production 전용 3중 게이트
+    (allow_real_orders/release_approved/allowlist)를 우회한 채 실주문 경로에
+    도달할 수 있다. 불일치는 어떤 주문·취소도 하기 전에 치명 오류로 종료한다.
+    """
+    expected = _ENVIRONMENT_BINDING.get(credential_environment)
+    if expected is None:
+        raise EnvironmentMismatchError(
+            f"unknown credential environment: {credential_environment!r}"
+        )
+    if expected is not runtime_environment:
+        raise EnvironmentMismatchError(
+            f"KIS credential '{credential_environment}' requires runtime "
+            f"'{expected}', but runtime.toml says '{runtime_environment}'. "
+            "실주문은 environment=production + 3중 게이트 승인으로만 가능하다."
+        )
