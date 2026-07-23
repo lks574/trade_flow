@@ -20,3 +20,6 @@ artifacts/*
 *.db-wal
 .env
 *.token
+
+# 비상 정지 스위치(로컬 전용)
+KILL_SWITCH

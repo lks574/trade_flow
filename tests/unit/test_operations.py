@@ -29,3 +29,14 @@ def test_nav_history_missing_file_is_empty(tmp_path) -> None:
     hist = NavHistory(tmp_path / "absent.json")
     assert hist.last_before(date(2026, 7, 22)) is None
     assert hist.daily_return(Decimal("100"), on=date(2026, 7, 22)) == Decimal(0)
+
+
+def test_log_notifier_writes_line(tmp_path) -> None:
+    from trade_flow.operations import LogNotifier, Notification
+
+    log = tmp_path / "run.log"
+    notifier = LogNotifier(log)
+    result = notifier.send(Notification("rebalance_complete", "제출 5건", "info"))
+    assert result.delivered
+    content = log.read_text()
+    assert "rebalance_complete" in content and "제출 5건" in content and "[info]" in content

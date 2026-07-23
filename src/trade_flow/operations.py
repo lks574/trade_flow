@@ -65,3 +65,30 @@ class DeliveryResult:
 
 class Notifier(Protocol):
     def send(self, notification: Notification) -> DeliveryResult: ...
+
+
+class LogNotifier:
+    """가장 단순한 Notifier 구현(§3.7): 표준출력 + 선택적 로그 파일에 append.
+
+    슬랙/이메일 등은 이 프로토콜을 구현해 교체한다. 운영 상태·실행 요약·경보에 쓴다.
+    """
+
+    def __init__(self, path: str | Path | None = None) -> None:
+        self._path = Path(path) if path else None
+
+    def send(self, notification: Notification) -> DeliveryResult:
+        from datetime import UTC, datetime
+
+        stamp = datetime.now(UTC).isoformat(timespec="seconds")
+        line = f"{stamp} [{notification.severity}] {notification.subject} — {notification.body}"
+        print(line)
+        if self._path is not None:
+            try:
+                self._path.parent.mkdir(parents=True, exist_ok=True)
+                with self._path.open("a", encoding="utf-8") as handle:
+                    handle.write(line + "\n")
+            except OSError as error:
+                return DeliveryResult(
+                    delivered=False, provider_message_id=None, error_code=str(error)
+                )
+        return DeliveryResult(delivered=True, provider_message_id=None, error_code=None)

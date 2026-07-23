@@ -32,9 +32,13 @@ from trade_flow.db import OrderRepository, RunRepository, initialize_database  #
 from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.execution import execute_rebalance  # noqa: E402
 from trade_flow.execution.planner import plan_orders  # noqa: E402
-from trade_flow.operations import NavHistory  # noqa: E402
+from trade_flow.operations import LogNotifier, NavHistory, Notification  # noqa: E402
 from trade_flow.risk import RegimePolicy, apply_risk_policy, build_regime_states  # noqa: E402
-from trade_flow.safety import ExecutionEnvironment, SafetyContext  # noqa: E402
+from trade_flow.safety import (  # noqa: E402
+    SafetyContext,
+    kill_switch_active,
+    load_runtime_config,
+)
 from trade_flow.strategy import signal  # noqa: E402
 
 
@@ -58,6 +62,8 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="실행 전 최신 바(가격 --period 10d)+VIX/WTI를 수집해 DB 갱신(collect extra 필요).",
     )
+    parser.add_argument("--runtime", type=Path, default=Path("configs/runtime.toml"))
+    parser.add_argument("--notify-log", type=Path, default=Path("data/daily_run.log"))
     parser.add_argument("--nav-history", type=Path, default=Path("data/nav_history.json"))
     parser.add_argument(
         "--max-staleness-days",
@@ -231,14 +237,22 @@ def _execute_live(
         config_hash="live",
         universe_hash="live",
     )
+    # 런타임 안전설정(환경/게이트/킬스위치)을 코드가 아닌 configs/runtime.toml에서 로드.
+    runtime = load_runtime_config(args.runtime)
+    kill = kill_switch_active(runtime, project_root=Path.cwd())
+    notifier = LogNotifier(args.notify_log)
+    if kill:
+        notifier.send(
+            Notification("kill_switch_active", f"KILL_SWITCH 존재 -> 중단 ({run_id})", "critical")
+        )
     safety = SafetyContext(
-        environment=ExecutionEnvironment.PAPER,
-        dry_run=False,
-        allow_real_orders=False,
-        release_approved=False,
+        environment=runtime.environment,
+        dry_run=runtime.dry_run,
+        allow_real_orders=runtime.allow_real_orders,
+        release_approved=runtime.release_approved,
         account_hash=account.account_hash,
-        allowed_account_hashes=frozenset({account.account_hash}),
-        kill_switch_active=False,
+        allowed_account_hashes=runtime.allowed_account_hashes,
+        kill_switch_active=kill,
         data_fresh=data_fresh,
         account_reconciled=True,
         open_orders_reconciled=open_orders_reconciled,
@@ -255,11 +269,18 @@ def _execute_live(
             daily_return=daily_return, regime_policy=policy,
         )
     except SafetyBlocked as blocked:
+        notifier.send(
+            Notification("execution_blocked", f"{run_id} 차단: {blocked.reasons}", "warning")
+        )
         print(f"  안전 게이트 차단: {blocked.reasons}")
         return 3
     except KisApiError as error:
+        notifier.send(Notification("submit_error", f"{run_id} 제출 오류: {error}", "error"))
         print(f"  KIS 제출 오류(장종료 등): {error}")
         return 3
+    nav = float(result.final_account.nav)
+    summary = f"{run_id}: 제출 {len(result.broker_orders)}건, 최종 NAV ${nav:,.0f}"
+    notifier.send(Notification("rebalance_complete", summary, "info"))
     print(f"  run_id: {run_id}")
     print(f"  제출된 주문 {len(result.broker_orders)}건:")
     for order in result.broker_orders:

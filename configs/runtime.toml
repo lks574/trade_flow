@@ -1,0 +1,16 @@
+# 실행 런타임 안전 설정. 환경/게이트/킬스위치를 코드가 아닌 여기서 제어한다.
+#
+# paper(모의) 기본값. 실전(production) 전환은 신중히:
+#   environment = "production", allow_real_orders = true,
+#   release_approved = true(승인 후), allowed_account_hashes = ["kis-real-<계좌>"]
+# 로 바꾼다. production에서만 allowed_account_hashes로 계좌를 게이트한다(paper는 미검사).
+# 계좌번호가 포함되므로 실전 해시는 커밋하지 말고 로컬에서만 채우는 것을 권장.
+
+environment = "paper"
+dry_run = false
+allow_real_orders = false
+release_approved = false
+allowed_account_hashes = []
+
+# 이 파일이 존재하면 모든 주문을 차단한다(비상 정지). 만들면 kill on, 지우면 off.
+kill_switch_path = "KILL_SWITCH"
