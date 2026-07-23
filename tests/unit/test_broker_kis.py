@@ -38,20 +38,33 @@ def _cred(env: str = "mock") -> KisCredentials:
     )
 
 
-def test_credentials_from_env_requires_core_vars() -> None:
+def test_credentials_from_env_requires_selected_env_vars() -> None:
     with pytest.raises(KisConfigError):
-        KisCredentials.from_env({"KIS_APP_KEY": "k"})  # secret/account 누락
+        KisCredentials.from_env({"KIS_ENV": "mock", "KIS_MOCK_APP_KEY": "k"})  # secret/account 누락
 
 
-def test_credentials_env_and_base_url() -> None:
-    mock = KisCredentials.from_env(
-        {"KIS_APP_KEY": "k", "KIS_APP_SECRET": "s", "KIS_ACCOUNT": "12345678"}
-    )
+def test_credentials_selects_env_by_prefix_and_base_url() -> None:
+    both = {
+        "KIS_MOCK_APP_KEY": "mk",
+        "KIS_MOCK_APP_SECRET": "ms",
+        "KIS_MOCK_ACCOUNT": "50000000",
+        "KIS_REAL_APP_KEY": "rk",
+        "KIS_REAL_APP_SECRET": "rs",
+        "KIS_REAL_ACCOUNT": "60000000",
+    }
+    mock = KisCredentials.from_env({**both, "KIS_ENV": "mock"})
     assert mock.is_mock and mock.base_url == MOCK_BASE_URL
-    real = KisCredentials.from_env(
-        {"KIS_APP_KEY": "k", "KIS_APP_SECRET": "s", "KIS_ACCOUNT": "1", "KIS_ENV": "real"}
-    )
+    assert mock.app_key == "mk" and mock.account == "50000000"
+    real = KisCredentials.from_env({**both, "KIS_ENV": "real"})
     assert not real.is_mock and real.base_url == REAL_BASE_URL
+    assert real.app_key == "rk" and real.account == "60000000"
+
+
+def test_credentials_default_env_is_mock() -> None:
+    cred = KisCredentials.from_env(
+        {"KIS_MOCK_APP_KEY": "k", "KIS_MOCK_APP_SECRET": "s", "KIS_MOCK_ACCOUNT": "1"}
+    )
+    assert cred.is_mock
 
 
 def test_access_token_issues_once_and_caches(tmp_path) -> None:
