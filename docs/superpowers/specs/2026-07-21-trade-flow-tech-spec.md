@@ -54,6 +54,7 @@
 | 일일 손실 한도 기본값 | 전 거래일 확정 NAV 대비 -3% | Phase 2에서 확정 |
 | 위험 레짐 진입 | VIX 종가 > 30 또는 WTI 20거래일 수익률 > 30% | Phase 1 |
 | 위험 레짐 해제 | 진입 조건이 3거래일 연속 거짓 | Phase 1 |
+| 위험 레짐 해제 VIX 임계 | 기본 30(=진입 임계, 비대칭 해제 비활성). 낮추면 [값, 진입임계]가 hysteresis 밴드가 되어 재진입 whipsaw 완화. 값은 grade-B 후 확정 | Phase 1 |
 | 노출 축소 정책 주식 상한 | 확정 NAV의 50% | Phase 1 실험에만 사용 |
 | 지정가 허용 폭 기본값 | 기준 가격 대비 매수 +0.30%, 매도 -0.30% | Phase 2에서 확정 |
 | 주문 유효시간 기본값 | 제출 후 10분 | Phase 2에서 확정 |
@@ -503,6 +504,7 @@ class Notifier(Protocol):
 | v1.0 | 2026-07-21 | 원본 설계를 구현 가능한 계약과 검증 기준으로 재구성 | Codex |
 | v1.1 | 2026-07-21 | 기준 스펙 승격과 레짐·팩터·PIT·정합성 정책 통합 | Codex |
 | v1.2 | 2026-07-23 | 회전율 절감을 위한 선정 hysteresis(§3.3)와 no-trade band(§3.5) 추가, §0.2 정책 수치 2건 추가. grade-C 전체 유니버스 검증(turnover 1120×, 30bp 손실)과 Codex 교차검증 근거. 파라미터 값은 grade-B 후 확정. 상세: docs/reviews/2026-07-23-turnover-spec-amendment-proposal.md | Claude |
+| v1.3 | 2026-07-23 | 레짐 해제 VIX 비대칭 임계(§0.2) 추가 — 2020형 급락 방어 유지하며 2022형 그라인딩 베어 재진입 whipsaw 완화. 기본값 30으로 기존 동작 bit-identical, 값은 grade-B 후 확정. 다구간 검증+Codex 교차검증 근거: docs/reviews/2026-07-23-regime-overlay-effectiveness.md | Claude |
 
 ---
 
