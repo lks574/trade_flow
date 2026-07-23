@@ -113,3 +113,13 @@ def test_api_error_raises(tmp_path) -> None:
     client = KisClient(_cred(), session=session, token_cache_path=tmp_path / "t.json")
     with pytest.raises(KisApiError):
         client.inquire_balance_raw()
+
+
+def test_present_balance_uses_v_prefixed_tr_id(tmp_path) -> None:
+    session = _FakeSession(get_payloads=[{"rt_cd": "0", "output2": [], "output3": {}}])
+    client = KisClient(_cred("mock"), session=session, token_cache_path=tmp_path / "t.json")
+    client.inquire_present_balance_raw(nation="840")
+    url, headers, params = session.get_calls[0]
+    assert url.endswith("/uapi/overseas-stock/v1/trading/inquire-present-balance")
+    assert headers["tr_id"] == "VTRP6504R"  # 모의
+    assert params["NATN_CD"] == "840" and params["WCRC_FRCR_DVSN_CD"] == "02"

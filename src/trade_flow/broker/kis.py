@@ -27,6 +27,7 @@ TRADING_EXCHANGE = {"NASDAQ": "NASD", "NYSE": "NYSE", "AMEX": "AMEX"}
 
 # TR_ID (모의는 실전 코드 앞에 V)
 TR_BALANCE = {"mock": "VTTS3012R", "real": "TTTS3012R"}
+TR_PRESENT_BALANCE = {"mock": "VTRP6504R", "real": "CTRP6504R"}
 TR_ORDER_BUY = {"mock": "VTTT1002U", "real": "TTTT1002U"}
 TR_ORDER_SELL = {"mock": "VTTT1006U", "real": "TTTT1006U"}
 TR_PRICE = "HHDFS00000300"  # 시세는 모의/실전 공통
@@ -167,6 +168,26 @@ class KisClient:
         )
         data = response.json()
         _raise_for_rt(data, "inquire-balance")
+        return data
+
+    def inquire_present_balance_raw(self, nation: str = "840") -> dict[str, Any]:
+        """해외주식 체결기준 현재잔고(예수금 포함) 원시 응답. nation 840=미국."""
+        params = {
+            "CANO": self._cred.account,
+            "ACNT_PRDT_CD": self._cred.account_product,
+            "WCRC_FRCR_DVSN_CD": "02",  # 02=외화
+            "NATN_CD": nation,
+            "TR_MKET_CD": "00",
+            "INQR_DVSN_CD": "00",
+        }
+        response = self._get_session().get(
+            self._url("/uapi/overseas-stock/v1/trading/inquire-present-balance"),
+            headers=self._headers(TR_PRESENT_BALANCE[self._cred.environment]),
+            params=params,
+            timeout=self._timeout,
+        )
+        data = response.json()
+        _raise_for_rt(data, "inquire-present-balance")
         return data
 
     def price_raw(self, symbol: str, exchange: str = "NASDAQ") -> dict[str, Any]:
