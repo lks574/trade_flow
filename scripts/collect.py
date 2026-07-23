@@ -67,14 +67,17 @@ def _bars_from_history(symbol: str, history, fetched_at: datetime) -> list[Daily
     return bars
 
 
-def collect_prices(config: Path, db: Path, years: int) -> None:
+def collect_prices(config: Path, db: Path, years: int, period: str | None = None) -> None:
     import yfinance as yf  # lazy: collect extra only
 
     universe = load_universe(config)
     mappings = universe.symbols
     repository = PriceRepository(db)
     fetched_at = datetime.now(UTC)
-    period = f"{years}y"
+    # period 지정 시 증분 수집(예 "10d") — 일일 운영용. 미지정 시 전체 이력(years).
+    # 주의: 분할일에는 짧은 창의 split-adjusted가 과거 DB와 불일치할 수 있어, 분할 발생 시
+    # 전체 재수집이 필요하다(일상적 증분은 안전).
+    period = period or f"{years}y"
     written = 0
     for index, mapping in enumerate(mappings, start=1):
         history = yf.Ticker(mapping.provider_symbol).history(
@@ -111,13 +114,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", type=Path, default=Path("data/trade_flow.db"))
     parser.add_argument("--config", type=Path, default=Path("configs/universe_main.toml"))
     parser.add_argument("--years", type=int, default=10)
+    parser.add_argument(
+        "--period",
+        default=None,
+        help="증분 수집 기간(예: 10d). 미지정 시 --years 전체 이력. 일일 운영은 짧게.",
+    )
     parser.add_argument("--skip-prices", action="store_true")
     parser.add_argument("--skip-regime", action="store_true")
     args = parser.parse_args(argv)
 
     initialize_database(args.db)
     if not args.skip_prices:
-        collect_prices(args.config, args.db, args.years)
+        collect_prices(args.config, args.db, args.years, period=args.period)
     if not args.skip_regime:
         collect_regime(args.db)
     return 0

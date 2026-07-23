@@ -32,6 +32,7 @@ from trade_flow.db import OrderRepository, RunRepository, initialize_database  #
 from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.execution import execute_rebalance  # noqa: E402
 from trade_flow.execution.planner import plan_orders  # noqa: E402
+from trade_flow.operations import NavHistory  # noqa: E402
 from trade_flow.risk import RegimePolicy, apply_risk_policy, build_regime_states  # noqa: E402
 from trade_flow.safety import ExecutionEnvironment, SafetyContext  # noqa: E402
 from trade_flow.strategy import signal  # noqa: E402
@@ -52,9 +53,23 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--ops-db", type=Path, default=Path("data/live_orders.db"))
     parser.add_argument("--run-suffix", default="", help="run_id 고유화용 접미사")
+    parser.add_argument(
+        "--refresh-data",
+        action="store_true",
+        help="실행 전 최신 바(가격 --period 10d)+VIX/WTI를 수집해 DB 갱신(collect extra 필요).",
+    )
+    parser.add_argument("--nav-history", type=Path, default=Path("data/nav_history.json"))
+    parser.add_argument(
+        "--max-staleness-days",
+        type=int,
+        default=4,
+        help="최종 세션이 오늘로부터 이 일수 이내면 데이터 신선(주말/휴장 고려 기본 4).",
+    )
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
+    if args.refresh_data:
+        _refresh_data(args)
     provider = SqliteMarketDataProvider(args.db)
     calendar = SqliteMarketCalendar(args.db)
     connection = sqlite3.connect(args.db)
@@ -70,7 +85,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     for note in notes:
         print("  note:", note)
-    print(f"유니버스 {len(surviving)}종목, 최종 세션 {end}")
+    staleness = (date.today() - end).days  # noqa: DTZ011 - 로컬 날짜 기준 신선도
+    data_fresh = staleness <= args.max_staleness_days
+    print(f"유니버스 {len(surviving)}종목, 최종 세션 {end} (staleness {staleness}일, "
+          f"fresh={data_fresh})")
+    if not data_fresh:
+        print(f"  경고: 데이터가 {staleness}일 지남 -> --refresh-data 권장. 라이브 매수 차단됨.")
 
     try:
         broker = KisBroker(build_client())
@@ -98,7 +118,11 @@ def main(argv: list[str] | None = None) -> int:
     if state is None:
         print("경고: 최종 세션 레짐 상태 없음 -> 매수 차단(fail-closed)")
     policy = RegimePolicy(args.policy)
-    daily_return = Decimal(0)  # dry-run: 전일 대비 수익률 미적용
+    nav_history = NavHistory(args.nav_history)
+    daily_return = nav_history.daily_return(account.nav, on=end)
+    nav_history.record(end, account.nav)
+    print(f"daily_return={float(daily_return):+.4f} (전 거래일 확정 NAV 대비, 손실한도 "
+          f"-{float(config.risk.daily_loss_limit_fraction):.0%})")
     risk_target = apply_risk_policy(
         strategy_result, account,
         state or _missing_regime(end),
@@ -112,7 +136,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.execute:
         return _execute_live(
             config, broker, strategy_result, state or _missing_regime(end),
-            policy, daily_return, account, end, args,
+            policy, daily_return, account, end, args, data_fresh=data_fresh,
         )
 
     print("시세 조회 중(선정+보유)...")
@@ -146,7 +170,22 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-def _execute_live(config, broker, strategy_result, state, policy, daily_return, account, end, args):
+def _refresh_data(args) -> None:
+    """실행 전 최신 바(단기)+VIX/WTI 수집(collect extra). 실패해도 기존 DB로 진행."""
+    print("데이터 갱신 중(최근 바 + VIX/WTI)...")
+    try:
+        import collect as C  # scripts/collect.py (sys.path에 scripts 포함)
+
+        C.collect_prices(Path(args.universe), args.db, years=10, period="10d")
+        C.collect_regime(args.db)
+    except Exception as error:  # noqa: BLE001 - 갱신 실패는 치명적이지 않음(기존 DB 사용)
+        print(f"  경고: 데이터 갱신 실패({error}). 기존 DB로 진행.")
+
+
+def _execute_live(
+    config, broker, strategy_result, state, policy, daily_return, account, end, args,
+    *, data_fresh,
+):
     """라이브 주문 제출(모의). execute_rebalance가 시세·계획·안전게이트·제출을 처리한다."""
     print("\n=== LIVE 제출 (execute_rebalance) ===")
     print("  ⚠️ 실제 (모의) 주문을 제출합니다. 미국 정규장이 닫혀 있으면 '장종료'로 거부됩니다.")
@@ -173,7 +212,7 @@ def _execute_live(config, broker, strategy_result, state, policy, daily_return, 
         account_hash=account.account_hash,
         allowed_account_hashes=frozenset({account.account_hash}),
         kill_switch_active=False,
-        data_fresh=True,
+        data_fresh=data_fresh,
         account_reconciled=True,
         open_orders_reconciled=True,
         within_execution_window=True,
