@@ -126,11 +126,14 @@ def test_present_balance_uses_v_prefixed_tr_id(tmp_path) -> None:
 
 
 class _FakeClient:
-    def __init__(self, present, balance, price_map) -> None:
-        self._present = present
-        self._balance = balance
-        self._price_map = price_map
+    def __init__(self, present=None, balance=None, price_map=None, nccs=None) -> None:
+        self._present = present or {}
+        self._balance = balance or {}
+        self._price_map = price_map or {}
+        self._nccs = nccs or {"output": []}
         self._cred = type("C", (), {"environment": "mock", "account": "50198973"})()
+        self.order_calls: list = []
+        self.cancel_calls: list = []
 
     def inquire_present_balance_raw(self, nation="840"):
         return self._present
@@ -140,6 +143,17 @@ class _FakeClient:
 
     def price_raw(self, symbol, exchange="NASDAQ"):
         return self._price_map[symbol]
+
+    def order_raw(self, *, symbol, side, quantity, price, exchange="NASDAQ"):
+        self.order_calls.append((symbol, side, quantity, price, exchange))
+        return {"rt_cd": "0", "output": {"ODNO": "0000000123", "KRX_FWDG_ORD_ORGNO": "1234"}}
+
+    def cancel_order_raw(self, *, symbol, org_order_no, quantity, exchange="NASDAQ"):
+        self.cancel_calls.append((symbol, org_order_no, quantity, exchange))
+        return {"rt_cd": "0", "output": {}}
+
+    def inquire_nccs_raw(self, exchange="NASDAQ"):
+        return self._nccs
 
 
 def test_kis_broker_account_snapshot_usd_mapping() -> None:
@@ -181,3 +195,62 @@ def test_is_rate_limited_detects_kis_message() -> None:
     assert _is_rate_limited({"rt_cd": "1", "msg1": "초당 거래건수를 초과하였습니다."})
     assert _is_rate_limited({"error_code": "EGW00201"})
     assert not _is_rate_limited({"rt_cd": "0", "msg1": "정상처리 되었습니다."})
+
+
+def _intent(side="buy", qty=1, price="100"):
+    from datetime import date
+    from decimal import Decimal
+
+    from trade_flow.execution.models import OrderIntent
+
+    return OrderIntent(
+        intent_id=f"intent-{side}",
+        trading_date=date(2026, 7, 23),
+        symbol="AAPL",
+        side=side,
+        quantity=qty,
+        limit_price=Decimal(price),
+        rebalance_sequence=0,
+    )
+
+
+def test_kis_broker_submit_returns_broker_order_and_registers() -> None:
+    from trade_flow.broker import KisBroker
+
+    fake = _FakeClient()
+    broker = KisBroker(fake)
+    order = broker.submit(_intent(side="buy", qty=1, price="100"))
+    assert order.broker_order_id == "0000000123"
+    assert order.status == "submitted" and order.remaining_quantity == 1
+    assert fake.order_calls == [("AAPL", "buy", 1, "100", "NASDAQ")]
+    # 멱등성: 같은 실행에서 find_by_intent가 등록된 주문을 찾는다.
+    found = broker.find_by_intent("intent-buy")
+    assert found is not None and found.broker_order_id == "0000000123"
+
+
+def test_kis_broker_cancel_uses_registered_context() -> None:
+    from trade_flow.broker import KisBroker
+
+    fake = _FakeClient()
+    broker = KisBroker(fake)
+    order = broker.submit(_intent(qty=3))
+    cancelled = broker.cancel(order.broker_order_id)
+    assert cancelled.status == "cancelled"
+    assert fake.cancel_calls == [("AAPL", "0000000123", 3, "NASDAQ")]
+
+
+def test_kis_broker_status_pending_vs_filled() -> None:
+    from trade_flow.broker import KisBroker
+
+    # 미체결에 남아있으면 submitted(부분), 없으면 filled.
+    pending = _FakeClient(nccs={"output": [{"odno": "0000000123", "nccs_qty": "1"}]})
+    broker = KisBroker(pending)
+    broker.submit(_intent(qty=1))
+    status = broker.find_by_intent("intent-buy")
+    assert status.status == "submitted" and status.remaining_quantity == 1
+
+    filled = _FakeClient(nccs={"output": []})
+    broker2 = KisBroker(filled)
+    broker2.submit(_intent(qty=1))
+    status2 = broker2.find_by_intent("intent-buy")
+    assert status2.status == "filled" and status2.filled_quantity == 1

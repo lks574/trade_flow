@@ -45,12 +45,18 @@ class KisBroker:
         *,
         exchange_map: dict[str, str] | None = None,
         default_exchange: str = "NASDAQ",
+        poll_interval_seconds: float = 2.0,
     ) -> None:
         self._client = client
         self._exchange_map = exchange_map or {}
         self._default_exchange = default_exchange
+        self._poll_interval = poll_interval_seconds
         cred = client._cred  # noqa: SLF001
         self._account_hash = f"kis-{cred.environment}-{cred.account}"
+        # 제출한 주문의 컨텍스트(취소·조회에 필요). ODNO -> 주문 정보.
+        # KIS는 사용자 정의 주문ID를 지원하지 않아 프로세스 내 멱등성/취소를 위해 유지한다.
+        self._orders: dict[str, dict[str, object]] = {}
+        self._intent_index: dict[str, str] = {}  # intent_id -> ODNO
 
     def _exchange(self, symbol: str) -> str:
         return self._exchange_map.get(symbol, self._default_exchange)
@@ -102,18 +108,105 @@ class KisBroker:
         # planner가 지정가 허용폭(±)을 적용하므로 매수/매도 지정가는 여기서 벌어진다.
         return Quote(symbol=symbol, bid=last, ask=last, captured_at=datetime.now(UTC))
 
-    # --- 주문 (2b-2) ---
-    def find_by_intent(self, intent_id: str) -> BrokerOrder | None:
-        raise NotImplementedError("주문 조회는 2b-2에서 구현")
-
+    # --- 주문 ---
     def submit(self, intent: OrderIntent) -> BrokerOrder:
-        raise NotImplementedError("주문 제출은 2b-2에서 구현")
+        exchange = self._exchange(intent.symbol)
+        data = self._client.order_raw(
+            symbol=intent.symbol,
+            side=intent.side,
+            quantity=intent.quantity,
+            price=format(intent.limit_price, "f"),
+            exchange=exchange,
+        )
+        output = data.get("output") or {}
+        odno = str(output.get("ODNO") or "").strip()
+        if not odno:
+            raise KisApiError(f"order accepted but no ODNO: {data.get('msg1')}")
+        self._orders[odno] = {
+            "symbol": intent.symbol,
+            "exchange": exchange,
+            "quantity": intent.quantity,
+            "side": intent.side,
+            "intent_id": intent.intent_id,
+            "org_orgno": str(output.get("KRX_FWDG_ORD_ORGNO") or "").strip(),
+        }
+        self._intent_index[intent.intent_id] = odno
+        return BrokerOrder(
+            broker_order_id=odno,
+            intent_id=intent.intent_id,
+            status="submitted",
+            filled_quantity=0,
+            remaining_quantity=intent.quantity,
+        )
+
+    def find_by_intent(self, intent_id: str) -> BrokerOrder | None:
+        # 프로세스 내 멱등성: 같은 실행에서 이미 제출한 intent면 현재 상태를 반환한다.
+        # (프로세스 간 멱등성은 OrderRepository 연동이 필요 — 후속.)
+        odno = self._intent_index.get(intent_id)
+        if odno is None:
+            return None
+        info = self._orders[odno]
+        return self._status(odno, intent_id, int(info["quantity"]), str(info["exchange"]))
 
     def await_terminal(self, order: BrokerOrder, timeout_seconds: int) -> BrokerOrder:
-        raise NotImplementedError("체결 대기는 2b-2에서 구현")
+        import time
+
+        info = self._orders.get(order.broker_order_id, {})
+        exchange = str(info.get("exchange", self._default_exchange))
+        quantity = int(info.get("quantity", order.remaining_quantity))
+        deadline = time.monotonic() + max(0, timeout_seconds)
+        current = order
+        while time.monotonic() < deadline:
+            current = self._status(order.broker_order_id, order.intent_id, quantity, exchange)
+            if current.terminal:
+                return current
+            time.sleep(self._poll_interval)
+        return current
 
     def cancel(self, broker_order_id: str) -> BrokerOrder:
-        raise NotImplementedError("주문 취소는 2b-2에서 구현")
+        info = self._orders.get(broker_order_id)
+        if info is None:
+            raise KisApiError(f"unknown broker order id: {broker_order_id}")
+        self._client.cancel_order_raw(
+            symbol=str(info["symbol"]),
+            org_order_no=broker_order_id,
+            quantity=int(info["quantity"]),
+            exchange=str(info["exchange"]),
+        )
+        return BrokerOrder(
+            broker_order_id=broker_order_id,
+            intent_id=str(info["intent_id"]),
+            status="cancelled",
+            filled_quantity=0,
+            remaining_quantity=int(info["quantity"]),
+        )
+
+    def _status(
+        self, odno: str, intent_id: str, quantity: int, exchange: str
+    ) -> BrokerOrder:
+        """미체결내역에 남아있으면 pending(submitted), 없으면 체결완료로 간주한다.
+
+        주의: 부분체결 수량 세분화는 체결내역(ccnl) 필드 확정 후 정교화한다(후속).
+        """
+        pending = self._client.inquire_nccs_raw(exchange=exchange)
+        for row in pending.get("output") or []:
+            if str(row.get("odno") or "").strip() == odno:
+                remaining = int(_dec(row.get("nccs_qty") or row.get("ord_qty") or quantity))
+                return BrokerOrder(
+                    broker_order_id=odno,
+                    intent_id=intent_id,
+                    status="submitted",
+                    filled_quantity=quantity - remaining,
+                    remaining_quantity=remaining,
+                )
+        # 미체결에 없음 -> 전량 체결(또는 취소)로 간주.
+        return BrokerOrder(
+            broker_order_id=odno,
+            intent_id=intent_id,
+            status="filled",
+            filled_quantity=quantity,
+            remaining_quantity=0,
+        )
 
 
 def _usd_rate(present_balance: dict) -> Decimal:

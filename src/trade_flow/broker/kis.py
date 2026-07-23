@@ -30,6 +30,9 @@ TR_BALANCE = {"mock": "VTTS3012R", "real": "TTTS3012R"}
 TR_PRESENT_BALANCE = {"mock": "VTRP6504R", "real": "CTRP6504R"}
 TR_ORDER_BUY = {"mock": "VTTT1002U", "real": "TTTT1002U"}
 TR_ORDER_SELL = {"mock": "VTTT1006U", "real": "TTTT1006U"}
+TR_CANCEL = {"mock": "VTTT1004U", "real": "TTTT1004U"}  # 정규장 정정취소(order-rvsecncl)
+TR_NCCS = {"mock": "VTTS3018R", "real": "TTTS3018R"}  # 미체결내역
+TR_CCNL = {"mock": "VTTS3035R", "real": "TTTS3035R"}  # 주문체결내역
 TR_PRICE = "HHDFS00000300"  # 시세는 모의/실전 공통
 
 
@@ -105,6 +108,27 @@ class KisClient:
                 self._url(path),
                 headers=self._headers(tr_id),
                 params=params,
+                timeout=self._timeout,
+            )
+            data = response.json()
+            if _is_rate_limited(data) and attempt == 0:
+                time.sleep(1.0)
+                continue
+            break
+        _raise_for_rt(data, context)
+        return data
+
+    def _post(self, path: str, tr_id: str, body: dict[str, str], context: str) -> dict[str, Any]:
+        """POST + 스로틀 + rate-limit 1회 재시도."""
+        import time
+
+        data: dict[str, Any] = {}
+        for attempt in range(2):
+            self._throttle()
+            response = self._get_session().post(
+                self._url(path),
+                headers=self._headers(tr_id),
+                json=body,
                 timeout=self._timeout,
             )
             data = response.json()
@@ -231,6 +255,80 @@ class KisClient:
         params = {"AUTH": "", "EXCD": excd, "SYMB": symbol}
         return self._get(
             "/uapi/overseas-price/v1/quotations/price", TR_PRICE, params, "price"
+        )
+
+    # --- 주문 ---
+    def order_raw(
+        self,
+        *,
+        symbol: str,
+        side: str,
+        quantity: int,
+        price: str,
+        exchange: str = "NASDAQ",
+    ) -> dict[str, Any]:
+        """해외주식 지정가 주문. side: buy|sell. 응답 output: KRX_FWDG_ORD_ORGNO, ODNO, ORD_TMD."""
+        tr_map = TR_ORDER_BUY if side == "buy" else TR_ORDER_SELL
+        body = {
+            "CANO": self._cred.account,
+            "ACNT_PRDT_CD": self._cred.account_product,
+            "OVRS_EXCG_CD": TRADING_EXCHANGE.get(exchange, exchange),
+            "PDNO": symbol,
+            "ORD_QTY": str(quantity),
+            "OVRS_ORD_UNPR": str(price),
+            "ORD_SVR_DVSN_CD": "0",
+            "ORD_DVSN": "00",  # 지정가
+        }
+        return self._post(
+            "/uapi/overseas-stock/v1/trading/order",
+            tr_map[self._cred.environment],
+            body,
+            f"order-{side}",
+        )
+
+    def cancel_order_raw(
+        self,
+        *,
+        symbol: str,
+        org_order_no: str,
+        quantity: int,
+        exchange: str = "NASDAQ",
+    ) -> dict[str, Any]:
+        """해외주식 정규장 주문 취소(order-rvsecncl, RVSE_CNCL_DVSN_CD=02)."""
+        body = {
+            "CANO": self._cred.account,
+            "ACNT_PRDT_CD": self._cred.account_product,
+            "OVRS_EXCG_CD": TRADING_EXCHANGE.get(exchange, exchange),
+            "PDNO": symbol,
+            "ORGN_ODNO": org_order_no,
+            "RVSE_CNCL_DVSN_CD": "02",
+            "ORD_QTY": str(quantity),
+            "OVRS_ORD_UNPR": "0",
+            "ORD_SVR_DVSN_CD": "0",
+            "ORD_DVSN": "00",
+        }
+        return self._post(
+            "/uapi/overseas-stock/v1/trading/order-rvsecncl",
+            TR_CANCEL[self._cred.environment],
+            body,
+            "cancel",
+        )
+
+    def inquire_nccs_raw(self, exchange: str = "NASDAQ") -> dict[str, Any]:
+        """해외주식 미체결내역."""
+        params = {
+            "CANO": self._cred.account,
+            "ACNT_PRDT_CD": self._cred.account_product,
+            "OVRS_EXCG_CD": TRADING_EXCHANGE.get(exchange, exchange),
+            "SORT_SQN": "DS",
+            "CTX_AREA_FK200": "",
+            "CTX_AREA_NK200": "",
+        }
+        return self._get(
+            "/uapi/overseas-stock/v1/trading/inquire-nccs",
+            TR_NCCS[self._cred.environment],
+            params,
+            "inquire-nccs",
         )
 
 
