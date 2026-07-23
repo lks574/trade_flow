@@ -20,6 +20,10 @@ collect = [
     "yfinance>=0.2",
     "lxml>=5",
 ]
+# 실거래 브로커(KIS OpenAPI) 연동만. core는 의존성 0 유지 위해 지연 import한다.
+live = [
+    "requests>=2",
+]
 
 [project.scripts]
 trade-flow = "trade_flow.cli:main"
