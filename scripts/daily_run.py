@@ -170,6 +170,28 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def _reconcile_open_orders(broker):
+    """시작 시 브로커 미체결 주문을 조회·취소한다(이월 방지, §3.5). 반환: (reconciled, 메시지)."""
+    try:
+        opens = broker.open_orders()
+    except KisApiError as error:
+        return False, f"미체결 조회 실패: {error}"
+    if not opens:
+        return True, "미체결 없음"
+    cancelled, failed = 0, []
+    for order in opens:
+        try:
+            broker.cancel_open(order)
+            cancelled += 1
+        except KisApiError as error:
+            failed.append((order.get("odno"), str(error)))
+    if failed:
+        return False, (
+            f"이전 미체결 {len(opens)}건 중 {cancelled} 취소, {len(failed)} 실패: {failed}"
+        )
+    return True, f"이전 미체결 {cancelled}건 취소(이월 방지)"
+
+
 def _refresh_data(args) -> None:
     """실행 전 최신 바(단기)+VIX/WTI 수집(collect extra). 실패해도 기존 DB로 진행."""
     print("데이터 갱신 중(최근 바 + VIX/WTI)...")
@@ -190,6 +212,11 @@ def _execute_live(
     print("\n=== LIVE 제출 (execute_rebalance) ===")
     print("  ⚠️ 실제 (모의) 주문을 제출합니다. 미국 정규장이 닫혀 있으면 '장종료'로 거부됩니다.")
     from datetime import datetime
+
+    # §3.5 재실행 복구: 시작 시 이전 미체결 주문을 조회·취소(이월 방지). 취소 실패 시
+    # open_orders_reconciled=False로 후속 매수 차단(fail-closed).
+    open_orders_reconciled, recon_msg = _reconcile_open_orders(broker)
+    print(f"  정합성(미체결): {recon_msg}")
 
     database = initialize_database(args.ops_db)
     stamp = datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005 - run_id 고유화용
@@ -214,7 +241,7 @@ def _execute_live(
         kill_switch_active=False,
         data_fresh=data_fresh,
         account_reconciled=True,
-        open_orders_reconciled=True,
+        open_orders_reconciled=open_orders_reconciled,
         within_execution_window=True,
         daily_return=daily_return,
         daily_loss_limit=config.risk.daily_loss_limit_fraction,

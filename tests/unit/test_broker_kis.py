@@ -287,3 +287,17 @@ def test_kis_broker_resolve_exchange_probes_candidates() -> None:
     assert broker.resolve_exchange("GS") == "NYSE"
     # 캐시됨: 두 번째 호출은 매핑 재사용.
     assert broker.resolve_exchange("GS") == "NYSE"
+
+
+def test_kis_broker_open_orders_and_cancel_open() -> None:
+    from trade_flow.broker import KisBroker
+
+    nccs = {"output": [{"odno": "999", "pdno": "AAPL", "nccs_qty": "2", "ovrs_excg_cd": "NASD"}]}
+    fake = _FakeClient(nccs=nccs)
+    broker = KisBroker(fake)
+    opens = broker.open_orders()
+    # 3개 거래소 조회하지만 동일 odno는 dedup -> 1건.
+    assert len(opens) == 1
+    assert opens[0] == {"odno": "999", "symbol": "AAPL", "quantity": 2, "exchange_code": "NASD"}
+    broker.cancel_open(opens[0])
+    assert fake.cancel_calls[-1] == ("AAPL", "999", 2, "NASD")

@@ -183,6 +183,33 @@ class KisBroker:
             time.sleep(self._poll_interval)
         return current
 
+    def open_orders(self) -> list[dict[str, object]]:
+        """브로커의 미체결 주문 전량(거래소별 조회 후 병합). 재실행 복구/정합성 확인용(§3.5)."""
+        seen: dict[str, dict[str, object]] = {}
+        for exchange in self._CANDIDATE_EXCHANGES:
+            data = self._client.inquire_nccs_raw(exchange=exchange)
+            for row in data.get("output") or []:
+                odno = str(row.get("odno") or "").strip()
+                if not odno or odno in seen:
+                    continue
+                quantity = int(_dec(row.get("nccs_qty") or row.get("ft_ord_qty") or 0))
+                seen[odno] = {
+                    "odno": odno,
+                    "symbol": str(row.get("pdno") or "").strip(),
+                    "quantity": quantity,
+                    "exchange_code": str(row.get("ovrs_excg_cd") or "").strip(),
+                }
+        return list(seen.values())
+
+    def cancel_open(self, open_order: dict[str, object]) -> None:
+        """미체결 주문 하나를 취소(레지스트리 없이 원시 필드로). 이전 주문 이월 방지."""
+        self._client.cancel_order_raw(
+            symbol=str(open_order["symbol"]),
+            org_order_no=str(open_order["odno"]),
+            quantity=int(open_order["quantity"]),
+            exchange=str(open_order["exchange_code"]) or self._default_exchange,
+        )
+
     def cancel(self, broker_order_id: str) -> BrokerOrder:
         info = self._orders.get(broker_order_id)
         if info is None:
