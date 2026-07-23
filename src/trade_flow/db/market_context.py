@@ -6,7 +6,11 @@ from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from trade_flow.risk import RegimeInput
+# 서브모듈에서 직접 import: 패키지(trade_flow.risk)를 거치면 risk/__init__ -> risk.policy
+# -> trade_flow.strategy -> ... -> db -> market_context 로 되돌아오는 순환에서 RegimeInput이
+# 아직 바인딩되지 않아 ImportError가 난다(test_regime 단독 수집 등). regime 서브모듈은
+# domain.config만 의존하므로 순환이 없다.
+from trade_flow.risk.regime import RegimeInput
 
 VIX = "VIX"
 WTI = "WTI"

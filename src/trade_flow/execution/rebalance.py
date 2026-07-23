@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from types import MappingProxyType
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from trade_flow.db.execution import OrderRepository
 from trade_flow.domain.config import AppConfig
@@ -18,14 +18,14 @@ from trade_flow.execution.models import (
     Quote,
 )
 from trade_flow.execution.planner import plan_orders
-from trade_flow.risk import (
-    RegimePolicy,
-    RegimeState,
-    RiskAdjustedTarget,
-    apply_risk_policy,
-)
 from trade_flow.safety import SafetyContext, apply_safety_filters, authorize_execution
 from trade_flow.strategy import StrategyResult
+
+if TYPE_CHECKING:
+    # 애노테이션 전용. 런타임에 trade_flow.risk를 import하면 risk.policy -> execution ->
+    # rebalance 로 되돌아오는 순환이 생기므로(단독 모듈 import 실패), 타입만 지연 참조한다.
+    # apply_risk_policy는 execute_rebalance 내부에서 지연 import한다.
+    from trade_flow.risk import RegimePolicy, RegimeState, RiskAdjustedTarget
 
 
 def _risk_reduced_symbols(
@@ -93,6 +93,9 @@ def execute_rebalance(
     daily_return: Decimal,
     regime_policy: RegimePolicy,
 ) -> RebalanceResult:
+    # 지연 import로 risk<->execution 순환을 피한다(모듈 로드 시점이 아닌 호출 시점에 바인딩).
+    from trade_flow.risk import apply_risk_policy
+
     initial_account = broker.account_snapshot()
     if initial_account.account_hash != safety_context.account_hash:
         raise ValueError("safety context account does not match broker account")
