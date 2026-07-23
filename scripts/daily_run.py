@@ -28,9 +28,12 @@ from trade_flow.data.sqlite_provider import (  # noqa: E402
     SqliteMarketCalendar,
     SqliteMarketDataProvider,
 )
+from trade_flow.db import OrderRepository, RunRepository, initialize_database  # noqa: E402
 from trade_flow.domain.config import load_config  # noqa: E402
+from trade_flow.execution import execute_rebalance  # noqa: E402
 from trade_flow.execution.planner import plan_orders  # noqa: E402
 from trade_flow.risk import RegimePolicy, apply_risk_policy, build_regime_states  # noqa: E402
+from trade_flow.safety import ExecutionEnvironment, SafetyContext  # noqa: E402
 from trade_flow.strategy import signal  # noqa: E402
 
 
@@ -42,6 +45,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--start", default="2016-01-01")
     parser.add_argument("--max-symbols", type=int, default=600)
     parser.add_argument("--policy", choices=["buy_block", "equity_cap"], default="buy_block")
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help="라이브 주문 제출(모의 계좌). 미국 정규장 개장 필요. 미지정 시 dry-run.",
+    )
+    parser.add_argument("--ops-db", type=Path, default=Path("data/live_orders.db"))
+    parser.add_argument("--run-suffix", default="", help="run_id 고유화용 접미사")
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
@@ -99,6 +109,12 @@ def main(argv: list[str] | None = None) -> int:
     selected = ", ".join(f"{s}={float(w):.1%}" for s, w in sorted(targets.items()))
     print(f"\n선정 {len(targets)}종목: {selected}")
 
+    if args.execute:
+        return _execute_live(
+            config, broker, strategy_result, state or _missing_regime(end),
+            policy, daily_return, account, end, args,
+        )
+
     print("시세 조회 중(선정+보유)...")
     symbols = sorted(set(targets) | set(held))
     quotes = {}
@@ -127,6 +143,63 @@ def main(argv: list[str] | None = None) -> int:
     if plan.drift:
         print("  drift:", dict(plan.drift))
     print("\n라이브 제출(execute_rebalance)은 미국 정규장 개장 + 별도 확인 후 진행합니다.")
+    return 0
+
+
+def _execute_live(config, broker, strategy_result, state, policy, daily_return, account, end, args):
+    """라이브 주문 제출(모의). execute_rebalance가 시세·계획·안전게이트·제출을 처리한다."""
+    print("\n=== LIVE 제출 (execute_rebalance) ===")
+    print("  ⚠️ 실제 (모의) 주문을 제출합니다. 미국 정규장이 닫혀 있으면 '장종료'로 거부됩니다.")
+    from datetime import datetime
+
+    database = initialize_database(args.ops_db)
+    stamp = datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005 - run_id 고유화용
+    run_id = f"daily-{end.isoformat()}-{stamp}{args.run_suffix}"
+    RunRepository(database).start(
+        run_id=run_id,
+        environment="paper",
+        account_hash=account.account_hash,
+        trading_date=end,
+        signal_date=end,
+        data_hash="live",
+        config_hash="live",
+        universe_hash="live",
+    )
+    safety = SafetyContext(
+        environment=ExecutionEnvironment.PAPER,
+        dry_run=False,
+        allow_real_orders=False,
+        release_approved=False,
+        account_hash=account.account_hash,
+        allowed_account_hashes=frozenset({account.account_hash}),
+        kill_switch_active=False,
+        data_fresh=True,
+        account_reconciled=True,
+        open_orders_reconciled=True,
+        within_execution_window=True,
+        daily_return=daily_return,
+        daily_loss_limit=config.risk.daily_loss_limit_fraction,
+    )
+    from trade_flow.safety import SafetyBlocked
+
+    try:
+        result = execute_rebalance(
+            strategy_result, state, config, broker, OrderRepository(database),
+            run_id=run_id, trading_date=end, safety_context=safety,
+            daily_return=daily_return, regime_policy=policy,
+        )
+    except SafetyBlocked as blocked:
+        print(f"  안전 게이트 차단: {blocked.reasons}")
+        return 3
+    except KisApiError as error:
+        print(f"  KIS 제출 오류(장종료 등): {error}")
+        return 3
+    print(f"  run_id: {run_id}")
+    print(f"  제출된 주문 {len(result.broker_orders)}건:")
+    for order in result.broker_orders:
+        print(f"    {order.broker_order_id} intent={order.intent_id[:8]} "
+              f"status={order.status} filled={order.filled_quantity}/{order.remaining_quantity}")
+    print(f"  최종 계좌 NAV ${float(result.final_account.nav):,.0f}")
     return 0
 
 
