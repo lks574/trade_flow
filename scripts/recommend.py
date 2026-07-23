@@ -37,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--start", default="2016-01-01")
     parser.add_argument("--max-symbols", type=int, default=600)
     parser.add_argument("--top", type=int, default=15)
+    parser.add_argument(
+        "--no-fundamentals",
+        action="store_true",
+        help="섹터·펀더멘털(yfinance) 조회 생략(순수 정량, 빠름).",
+    )
     args = parser.parse_args(argv)
 
     config = load_config(args.config)
@@ -47,7 +52,9 @@ def main(argv: list[str] | None = None) -> int:
         connection.execute("SELECT MAX(session_date) FROM prices").fetchone()[0]
     )
     start = date.fromisoformat(args.start)
-    universe = [m.symbol for m in R.load_universe(args.universe).symbols][: args.max_symbols]
+    universe_spec = R.load_universe(args.universe)
+    provider_of = {m.symbol: m.provider_symbol for m in universe_spec.symbols}
+    universe = [m.symbol for m in universe_spec.symbols][: args.max_symbols]
 
     snapshot, surviving, end, _notes = R._build_clean_snapshot(
         provider, calendar, universe, start=start, raw_end=raw_end, cap_final=True
@@ -59,24 +66,83 @@ def main(argv: list[str] | None = None) -> int:
         key=lambda item: (-item[1].total, -item[1].momentum_return, item[0]),
     )
     traded = set(result.target_weights)  # 자동매매가 실제로 담는 상위 N
+    top = ranked[: args.top]
 
-    print(f"주간 종목 추천 (정량 팩터) — 기준일 {end}, 적격 {len(ranked)}종목 중 상위 {args.top}")
-    print("가중치:", dict(config.strategy.factor_weights.__dict__)
-          if hasattr(config.strategy.factor_weights, "__dict__") else "")
-    print(f"{'순위':>3} {'종목':<7} {'총점':>6} {'모멘텀%':>7} {'모멘텀':>8} "
-          f"{'추세':>4} {'RSI':>4} {'MACD':>4} {'일평균거래대금($M)':>14}  매매")
-    for rank, (symbol, score) in enumerate(ranked[: args.top], start=1):
-        star = "★담음" if symbol in traded else ""
+    fundamentals: dict[str, dict] = {}
+    if not args.no_fundamentals:
+        print(f"펀더멘털 조회 중(상위 {len(top)}종목, yfinance)...")
+        fundamentals = _fetch_fundamentals([sym for sym, _ in top], provider_of)
+
+    print(f"\n주간 종목 추천 (정량 팩터) — 기준일 {end}, 적격 {len(ranked)}종목 중 상위 {args.top}")
+    print("팩터 가중치: 모멘텀 0.40 / 추세 0.25 / RSI 0.15 / MACD 0.20")
+    print(f"{'순위':>3} {'종목':<6} {'섹터':<22} {'총점':>5} {'모멘텀':>8} "
+          f"{'PER':>6} {'시총$B':>7} {'배당%':>5} 매매")
+    for rank, (symbol, score) in enumerate(top, start=1):
+        info = fundamentals.get(symbol, {})
+        star = "★" if symbol in traded else ""
         print(
-            f"{rank:>3} {symbol:<7} {float(score.total):>6.3f} "
-            f"{float(score.momentum_percentile):>7.2f} {float(score.momentum_return):>+8.2%} "
-            f"{int(score.trend):>4} {int(score.rsi):>4} {int(score.macd):>4} "
-            f"{float(score.average_dollar_volume) / 1e6:>14,.1f}  {star}"
+            f"{rank:>3} {symbol:<6} {_short(info.get('sector'), 22):<22} "
+            f"{float(score.total):>5.3f} {float(score.momentum_return):>+8.2%} "
+            f"{_num(info.get('pe')):>6} {_bil(info.get('mcap')):>7} "
+            f"{_pct(info.get('div')):>5} {star}"
         )
-    print("\n★ = 자동매매 전략이 이번 주 실제로 담는 종목(상위 "
-          f"{config.strategy.main_count}). 나머지는 후보 순위.")
-    print("주의: 기술적 팩터 기반. 펀더멘털/감정 계층은 미구현(docs/research 참고).")
+    print(f"\n★ = 자동매매가 이번 주 담는 상위 {config.strategy.main_count}. 나머지는 후보 순위.")
+    print("펀더멘털은 현재 시점 값(리포트 기준일과 무관). 기술적 팩터 랭킹 + 참고용 펀더멘털이며,")
+    print("LLM 펀더멘털·감정 계층은 미구현(docs/research 참고). 수치는 1차 자료로 재검증 후 사용.")
     return 0
+
+
+def _fetch_fundamentals(symbols: list[str], provider_of: dict[str, str]) -> dict[str, dict]:
+    try:
+        import yfinance as yf  # lazy: collect extra only
+    except ImportError:
+        print("  yfinance 미설치 -> 펀더멘털 생략(--no-fundamentals와 동일)")
+        return {}
+    out: dict[str, dict] = {}
+    for symbol in symbols:
+        try:
+            info = yf.Ticker(provider_of.get(symbol, symbol)).info
+            out[symbol] = {
+                "sector": info.get("sector"),
+                "pe": info.get("trailingPE"),
+                "mcap": info.get("marketCap"),
+                "div": info.get("dividendYield"),
+            }
+        except Exception:  # noqa: BLE001 - 개별 종목 실패는 무시(— 표시)
+            out[symbol] = {}
+    return out
+
+
+def _short(value, width: int) -> str:
+    if not value:
+        return "—"
+    text = str(value)
+    return text if len(text) <= width else text[: width - 1] + "…"
+
+
+def _num(value) -> str:
+    try:
+        return f"{float(value):.1f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _bil(value) -> str:
+    try:
+        return f"{float(value) / 1e9:,.0f}"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _pct(value) -> str:
+    try:
+        pct = float(value)
+    except (TypeError, ValueError):
+        return "—"
+    # yfinance 버전에 따라 소수(0.015) 또는 퍼센트(1.5)로 옴 -> 정규화.
+    if pct > 1:
+        return f"{pct:.1f}"
+    return f"{pct * 100:.1f}"
 
 
 if __name__ == "__main__":
