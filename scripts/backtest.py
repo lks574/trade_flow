@@ -181,6 +181,13 @@ def main(argv: list[str] | None = None) -> int:
         default=0,
         help="리서치 토글(quick 모드): 보유 종목을 top-(N+이값) 이내면 유지(선정 로테이션 감소)",
     )
+    parser.add_argument(
+        "--rebalance-every",
+        type=int,
+        default=1,
+        help="리서치 토글(quick 모드): 신호 적격 세션 k개마다 리밸런스(1=일일, 5≈주간, 21≈월간)",
+    )
+    parser.add_argument("--cost-bps", type=int, default=15, help="quick 모드 편도 비용(bp)")
     parser.add_argument("--out", type=Path, default=None)
     args = parser.parse_args(argv)
 
@@ -236,14 +243,15 @@ def main(argv: list[str] | None = None) -> int:
             main_symbols=main_symbols,
             high_volatility_symbols=high_symbols,
             initial_cash=initial_cash,
-            transaction_cost_bps=15,
+            transaction_cost_bps=args.cost_bps,
             regime_states=regime_states,
             regime_policy=RegimePolicy.BUY_BLOCK,
             rebalance_band=Decimal(args.rebalance_band),
             selection_hysteresis=args.hysteresis,
+            rebalance_every=args.rebalance_every,
         )
         metrics = calculate_metrics(result)
-        print("\n[quick 15bp/BUY_BLOCK]")
+        print(f"\n[quick {args.cost_bps}bp/BUY_BLOCK/every={args.rebalance_every}]")
         for key, value in asdict(metrics).items():
             print(f"  {key}: {value}")
         if args.out:

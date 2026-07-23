@@ -216,3 +216,25 @@ def test_rebalance_band_suppresses_when_not_risk_reduced() -> None:
         risk_reduced_symbols=frozenset(),
     )
     assert trades == []
+
+
+def test_rebalance_every_limits_signal_sessions() -> None:
+    """cadence: rebalance_every=k면 신호 적격 세션 k개마다 한 번만 거래가 생긴다."""
+    import pytest
+
+    config = load_config("configs/strategy.toml")
+
+    daily = run_backtest(_snapshot(), config, main_symbols=["A"])
+    weekly = run_backtest(_snapshot(), config, main_symbols=["A"], rebalance_every=5)
+
+    # 신호일이 5세션 간격 격자에 정렬되는지 확인(첫 신호일 기준 offset % 5 == 0).
+    weekly_signal_dates = sorted({t.signal_date for t in weekly.trades})
+    if weekly_signal_dates:
+        first = weekly_signal_dates[0]
+        for signal_date in weekly_signal_dates:
+            assert (signal_date - first).days % 5 == 0
+    # 거래 수는 일일 이하(동일 픽스처에서 같거나 적어야 함).
+    assert len(weekly.trades) <= len(daily.trades)
+
+    with pytest.raises(ValueError, match="rebalance_every"):
+        run_backtest(_snapshot(), config, main_symbols=["A"], rebalance_every=0)

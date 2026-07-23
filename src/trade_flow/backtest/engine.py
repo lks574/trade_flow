@@ -173,12 +173,15 @@ def run_backtest(
     regime_policy: RegimePolicy = RegimePolicy.BUY_BLOCK,
     rebalance_band: Decimal = Decimal(0),
     selection_hysteresis: int = 0,
+    rebalance_every: int = 1,
 ) -> BacktestResult:
     snapshot.quality_report.require_valid()
     if initial_cash <= 0 or transaction_cost_bps < 0:
         raise ValueError("initial cash must be positive and transaction cost cannot be negative")
     if rebalance_band < 0 or selection_hysteresis < 0:
         raise ValueError("rebalance_band and selection_hysteresis must be non-negative")
+    if rebalance_every < 1:
+        raise ValueError("rebalance_every must be >= 1")
     bars_by_date: dict[date, dict[str, DailyBar]] = defaultdict(dict)
     for bar in snapshot.prices:
         bars_by_date[bar.session_date][bar.symbol] = bar
@@ -201,6 +204,7 @@ def run_backtest(
     curve: list[EquityPoint] = []
     previous_nav = initial_cash
     cost_rate = Decimal(transaction_cost_bps) / Decimal(10000)
+    signal_sessions = 0  # rebalance_every 주기 계산용(신호 적격 세션 수)
 
     for session_index, session_date in enumerate(sessions):
         today = bars_by_date[session_date]
@@ -237,6 +241,13 @@ def run_backtest(
             seen_count[symbol] += 1
 
         if session_index + 1 < config.strategy.minimum_price_days:
+            previous_nav = nav
+            continue
+        # 리밸런스 주기(cadence): rebalance_every=k면 신호 적격 세션 k개마다 한 번만
+        # 신호·리스크 정책을 계산하고 나머지 세션은 보유 유지한다. 주의: 손절·레짐
+        # 등 리스크 대응도 리밸런스 세션에서만 발생한다(주간/월간 전략의 의미).
+        signal_sessions += 1
+        if (signal_sessions - 1) % rebalance_every != 0:
             previous_nav = nav
             continue
         main_set = _active_symbols(main_symbols, session_date)
