@@ -123,3 +123,61 @@ def test_present_balance_uses_v_prefixed_tr_id(tmp_path) -> None:
     assert url.endswith("/uapi/overseas-stock/v1/trading/inquire-present-balance")
     assert headers["tr_id"] == "VTRP6504R"  # 모의
     assert params["NATN_CD"] == "840" and params["WCRC_FRCR_DVSN_CD"] == "02"
+
+
+class _FakeClient:
+    def __init__(self, present, balance, price_map) -> None:
+        self._present = present
+        self._balance = balance
+        self._price_map = price_map
+        self._cred = type("C", (), {"environment": "mock", "account": "50198973"})()
+
+    def inquire_present_balance_raw(self, nation="840"):
+        return self._present
+
+    def inquire_balance_raw(self, exchange="NASDAQ"):
+        return self._balance
+
+    def price_raw(self, symbol, exchange="NASDAQ"):
+        return self._price_map[symbol]
+
+
+def test_kis_broker_account_snapshot_usd_mapping() -> None:
+    from decimal import Decimal
+
+    from trade_flow.broker import KisBroker
+
+    present = {
+        "output2": [{"crcy_cd": "USD", "frst_bltn_exrt": "1480.9"}],
+        "output3": {"tot_asst_amt": "148090"},  # / 1480.9 = 100 USD
+    }
+    balance = {
+        "output1": [
+            {"ovrs_pdno": "AAPL", "ovrs_cblc_qty": "2", "pchs_avg_pric": "25", "now_pric2": "30"}
+        ]
+    }
+    broker = KisBroker(_FakeClient(present, balance, {}))
+    snap = broker.account_snapshot()
+    assert snap.nav == Decimal("100")
+    assert snap.cash == Decimal("40")  # 100 - (2 * 30)
+    assert snap.positions["AAPL"].quantity == 2
+    assert snap.positions["AAPL"].market_price == Decimal("30")
+    assert snap.account_hash == "kis-mock-50198973"
+
+
+def test_kis_broker_quote_uses_last_for_bid_ask() -> None:
+    from decimal import Decimal
+
+    from trade_flow.broker import KisBroker
+
+    broker = KisBroker(_FakeClient({}, {}, {"AAPL": {"output": {"last": "325.89"}}}))
+    quote = broker.quote("AAPL")
+    assert quote.bid == Decimal("325.89") and quote.ask == Decimal("325.89")
+
+
+def test_is_rate_limited_detects_kis_message() -> None:
+    from trade_flow.broker.kis import _is_rate_limited
+
+    assert _is_rate_limited({"rt_cd": "1", "msg1": "초당 거래건수를 초과하였습니다."})
+    assert _is_rate_limited({"error_code": "EGW00201"})
+    assert not _is_rate_limited({"rt_cd": "0", "msg1": "정상처리 되었습니다."})

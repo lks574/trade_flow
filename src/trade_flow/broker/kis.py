@@ -49,6 +49,11 @@ def _raise_for_rt(data: dict[str, Any], context: str) -> None:
         raise KisApiError(f"{context} error: rt_cd={data.get('rt_cd')} msg={data.get('msg1')}")
 
 
+def _is_rate_limited(data: dict[str, Any]) -> bool:
+    message = f"{data.get('msg1', '')}{data.get('error_description', '')}"
+    return "초당 거래건수" in message or data.get("error_code") == "EGW00201"
+
+
 class KisClient:
     def __init__(
         self,
@@ -57,12 +62,16 @@ class KisClient:
         session: Any | None = None,
         token_cache_path: Path | None = None,
         timeout_seconds: float = 10.0,
+        min_request_interval: float = 0.0,
     ) -> None:
         self._cred = credentials
         self._session = session
         self._timeout = timeout_seconds
         self._token_cache_path = token_cache_path or Path("data/kis_token.json")
         self._cached: _CachedToken | None = None
+        # KIS는 초당 호출수를 제한한다(모의 ~2/s). 요청 간 최소 간격을 강제한다.
+        self._min_interval = min_request_interval
+        self._last_request = 0.0
 
     # --- 내부 HTTP ---
     def _get_session(self) -> Any:
@@ -74,6 +83,37 @@ class KisClient:
 
     def _url(self, path: str) -> str:
         return f"{self._cred.base_url}{path}"
+
+    def _throttle(self) -> None:
+        if self._min_interval <= 0:
+            return
+        import time
+
+        elapsed = time.monotonic() - self._last_request
+        if elapsed < self._min_interval:
+            time.sleep(self._min_interval - elapsed)
+        self._last_request = time.monotonic()
+
+    def _get(self, path: str, tr_id: str, params: dict[str, str], context: str) -> dict[str, Any]:
+        """GET + 스로틀 + rate-limit 1회 재시도."""
+        import time
+
+        data: dict[str, Any] = {}
+        for attempt in range(2):
+            self._throttle()
+            response = self._get_session().get(
+                self._url(path),
+                headers=self._headers(tr_id),
+                params=params,
+                timeout=self._timeout,
+            )
+            data = response.json()
+            if _is_rate_limited(data) and attempt == 0:
+                time.sleep(1.0)
+                continue
+            break
+        _raise_for_rt(data, context)
+        return data
 
     # --- 토큰 ---
     def access_token(self) -> str:
@@ -88,6 +128,7 @@ class KisClient:
         return self._issue_token()
 
     def _issue_token(self) -> str:
+        self._throttle()
         response = self._get_session().post(
             self._url("/oauth2/tokenP"),
             json={
@@ -160,15 +201,12 @@ class KisClient:
             "CTX_AREA_FK200": "",
             "CTX_AREA_NK200": "",
         }
-        response = self._get_session().get(
-            self._url("/uapi/overseas-stock/v1/trading/inquire-balance"),
-            headers=self._headers(TR_BALANCE[self._cred.environment]),
-            params=params,
-            timeout=self._timeout,
+        return self._get(
+            "/uapi/overseas-stock/v1/trading/inquire-balance",
+            TR_BALANCE[self._cred.environment],
+            params,
+            "inquire-balance",
         )
-        data = response.json()
-        _raise_for_rt(data, "inquire-balance")
-        return data
 
     def inquire_present_balance_raw(self, nation: str = "840") -> dict[str, Any]:
         """해외주식 체결기준 현재잔고(예수금 포함) 원시 응답. nation 840=미국."""
@@ -180,34 +218,31 @@ class KisClient:
             "TR_MKET_CD": "00",
             "INQR_DVSN_CD": "00",
         }
-        response = self._get_session().get(
-            self._url("/uapi/overseas-stock/v1/trading/inquire-present-balance"),
-            headers=self._headers(TR_PRESENT_BALANCE[self._cred.environment]),
-            params=params,
-            timeout=self._timeout,
+        return self._get(
+            "/uapi/overseas-stock/v1/trading/inquire-present-balance",
+            TR_PRESENT_BALANCE[self._cred.environment],
+            params,
+            "inquire-present-balance",
         )
-        data = response.json()
-        _raise_for_rt(data, "inquire-present-balance")
-        return data
 
     def price_raw(self, symbol: str, exchange: str = "NASDAQ") -> dict[str, Any]:
         """해외주식 현재가 원시 응답."""
         excd = PRICE_EXCHANGE.get(exchange, exchange)
         params = {"AUTH": "", "EXCD": excd, "SYMB": symbol}
-        response = self._get_session().get(
-            self._url("/uapi/overseas-price/v1/quotations/price"),
-            headers=self._headers(TR_PRICE),
-            params=params,
-            timeout=self._timeout,
+        return self._get(
+            "/uapi/overseas-price/v1/quotations/price", TR_PRICE, params, "price"
         )
-        data = response.json()
-        _raise_for_rt(data, "price")
-        return data
 
 
-def build_client(token_cache_path: Path | None = None) -> KisClient:
-    """환경변수 자격증명으로 클라이언트 구성."""
-    return KisClient(KisCredentials.from_env(), token_cache_path=token_cache_path)
+def build_client(
+    token_cache_path: Path | None = None, min_request_interval: float = 0.6
+) -> KisClient:
+    """환경변수 자격증명으로 클라이언트 구성. 기본 스로틀 0.6s(모의 초당 제한 대응)."""
+    return KisClient(
+        KisCredentials.from_env(),
+        token_cache_path=token_cache_path,
+        min_request_interval=min_request_interval,
+    )
 
 
 __all__ = ["KisClient", "KisApiError", "KisConfigError", "build_client"]
