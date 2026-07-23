@@ -32,8 +32,8 @@ def _dec(value: object) -> Decimal:
     return Decimal(str(value))
 
 
-def _adjust(value: Decimal, divisor: Decimal) -> Decimal:
-    return (value / divisor).quantize(_CENTS)
+def _restore_raw(value: Decimal, divisor: Decimal) -> Decimal:
+    return (value * divisor).quantize(_CENTS)
 
 
 def _bars_from_history(symbol: str, history, fetched_at: datetime) -> list[DailyBar]:
@@ -42,22 +42,26 @@ def _bars_from_history(symbol: str, history, fetched_at: datetime) -> list[Daily
     history = history.dropna(subset=["Open", "High", "Low", "Close", "Volume"])
     ratios = [_dec(value) if value else Decimal(1) for value in history["Stock Splits"]]
     divisors = split_adjustment_divisors(ratios)
+    # 주의: yfinance는 auto_adjust=False에서도 OHLC를 이미 분할 조정해 반환한다
+    # (배당만 미반영). 과거에 이 값을 divisor로 한 번 더 나눠 이중조정되는 버그가
+    # 있었다(분할일마다 조정 시계열에 가짜 점프). 조정 컬럼은 응답을 그대로 쓰고,
+    # 원시(당시 실거래) 가격은 미래 분할비의 곱(divisor)을 곱해 역산한다.
     bars: list[DailyBar] = []
     for (timestamp, row), divisor in zip(history.iterrows(), divisors, strict=True):
-        raw_open, raw_high = _dec(row["Open"]), _dec(row["High"])
-        raw_low, raw_close = _dec(row["Low"]), _dec(row["Close"])
+        adj_open, adj_high = _dec(row["Open"]), _dec(row["High"])
+        adj_low, adj_close = _dec(row["Low"]), _dec(row["Close"])
         bars.append(
             DailyBar(
                 symbol=symbol,
                 session_date=timestamp.date(),
-                open=raw_open,
-                high=raw_high,
-                low=raw_low,
-                close=raw_close,
-                split_adjusted_open=_adjust(raw_open, divisor),
-                split_adjusted_high=_adjust(raw_high, divisor),
-                split_adjusted_low=_adjust(raw_low, divisor),
-                split_adjusted_close=_adjust(raw_close, divisor),
+                open=_restore_raw(adj_open, divisor),
+                high=_restore_raw(adj_high, divisor),
+                low=_restore_raw(adj_low, divisor),
+                close=_restore_raw(adj_close, divisor),
+                split_adjusted_open=adj_open.quantize(_CENTS),
+                split_adjusted_high=adj_high.quantize(_CENTS),
+                split_adjusted_low=adj_low.quantize(_CENTS),
+                split_adjusted_close=adj_close.quantize(_CENTS),
                 volume=int(row["Volume"]),
                 cash_dividend=_dec(row.get("Dividends", 0) or 0),
                 source=SOURCE,
@@ -75,9 +79,8 @@ def collect_prices(config: Path, db: Path, years: int, period: str | None = None
     repository = PriceRepository(db)
     fetched_at = datetime.now(UTC)
     # period 지정 시 증분 수집(예 "10d") — 일일 운영용. 미지정 시 전체 이력(years).
-    # 주의: 분할일에는 짧은 창의 split-adjusted가 과거 DB와 불일치할 수 있어, 분할 발생 시
-    # 전체 재수집이 필요하다(일상적 증분은 안전).
-    period = period or f"{years}y"
+    full_period = f"{years}y"
+    period = period or full_period
     written = 0
     for index, mapping in enumerate(mappings, start=1):
         history = yf.Ticker(mapping.provider_symbol).history(
@@ -86,6 +89,13 @@ def collect_prices(config: Path, db: Path, years: int, period: str | None = None
         if history.empty:
             print(f"[{index}/{len(mappings)}] {mapping.symbol}: no data, skipped")
             continue
+        # 증분 창에서 분할이 감지되면 yfinance가 전체 이력을 재조정했다는 뜻이므로,
+        # 과거 DB 행과 스케일이 어긋나기 전에 해당 종목 전체 이력을 재수집한다(H5).
+        if period != full_period and (history["Stock Splits"] != 0).any():
+            print(f"[{index}/{len(mappings)}] {mapping.symbol}: 분할 감지 -> 전체 재수집")
+            history = yf.Ticker(mapping.provider_symbol).history(
+                period=full_period, auto_adjust=False, actions=True
+            )
         bars = _bars_from_history(mapping.symbol, history, fetched_at)
         written += repository.save_bars(bars)
         print(f"[{index}/{len(mappings)}] {mapping.symbol}: {len(bars)} bars")
