@@ -26,6 +26,7 @@ from trade_flow.data.sqlite_provider import (  # noqa: E402
     SqliteMarketDataProvider,
 )
 from trade_flow.domain.config import load_config  # noqa: E402
+from trade_flow.operations import Notification, TelegramNotifier  # noqa: E402
 from trade_flow.strategy import signal  # noqa: E402
 
 
@@ -42,7 +43,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="섹터·펀더멘털(yfinance) 조회 생략(순수 정량, 빠름).",
     )
+    parser.add_argument(
+        "--telegram",
+        action="store_true",
+        help="리포트를 텔레그램으로 발송(.env의 TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID 필요).",
+    )
     args = parser.parse_args(argv)
+
+    telegram = None
+    if args.telegram:
+        telegram = TelegramNotifier.from_env()
+        if telegram is None:
+            print(
+                "오류: --telegram 지정됐지만 TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID가 없다. "
+                "set -a && source .env && set +a 후 재실행.",
+                file=sys.stderr,
+            )
+            return 2
 
     config = load_config(args.config)
     provider = SqliteMarketDataProvider(args.db)
@@ -89,7 +106,37 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n★ = 자동매매가 이번 주 담는 상위 {config.strategy.main_count}. 나머지는 후보 순위.")
     print("펀더멘털은 현재 시점 값(리포트 기준일과 무관). 기술적 팩터 랭킹 + 참고용 펀더멘털이며,")
     print("LLM 펀더멘털·감정 계층은 미구현(docs/research 참고). 수치는 1차 자료로 재검증 후 사용.")
+
+    if telegram is not None:
+        body = _telegram_body(
+            top, traded, fundamentals, end=end, eligible=len(ranked),
+            main_count=config.strategy.main_count,
+        )
+        delivery = telegram.send(Notification("주간 종목 추천", body, "info"))
+        if not delivery.delivered:
+            print(f"텔레그램 발송 실패: {delivery.error_code}", file=sys.stderr)
+            return 2
+        print("텔레그램 발송 완료.")
     return 0
+
+
+def _telegram_body(
+    top, traded: set[str], fundamentals: dict[str, dict], *,
+    end: date, eligible: int, main_count: int,
+) -> str:
+    """모바일 가독성 위주의 컴팩트 리포트(모노스페이스 표 대신 줄 단위)."""
+    lines = [f"기준일 {end} · 적격 {eligible}종목 중 상위 {len(top)}"]
+    for rank, (symbol, score) in enumerate(top, start=1):
+        info = fundamentals.get(symbol, {})
+        star = " ★" if symbol in traded else ""
+        sector = _short(info.get("sector"), 18)
+        lines.append(
+            f"{rank}. {symbol}{star} {float(score.total):.3f} "
+            f"| 모멘텀 {float(score.momentum_return):+.1%} | {sector}"
+        )
+    lines.append(f"\n★=자동매매 top-{main_count}")
+    lines.append("기술적 팩터 랭킹(모멘텀0.40·추세0.25·RSI0.15·MACD0.20). 재검증 후 사용.")
+    return "\n".join(lines)
 
 
 def _fetch_fundamentals(symbols: list[str], provider_of: dict[str, str]) -> dict[str, dict]:
