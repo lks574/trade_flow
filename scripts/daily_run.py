@@ -33,9 +33,12 @@ from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.execution import execute_rebalance  # noqa: E402
 from trade_flow.execution.planner import plan_orders  # noqa: E402
 from trade_flow.operations import (  # noqa: E402
+    FanoutNotifier,
     LogNotifier,
     NavHistory,
     Notification,
+    Notifier,
+    TelegramNotifier,
     within_us_market_hours,
 )
 from trade_flow.risk import RegimePolicy, apply_risk_policy, build_regime_states  # noqa: E402
@@ -252,11 +255,19 @@ def _execute_live(
     # 런타임 안전설정(환경/게이트/킬스위치)을 코드가 아닌 configs/runtime.toml에서 로드.
     runtime = load_runtime_config(args.runtime)
     kill = kill_switch_active(runtime, project_root=Path.cwd())
-    notifier = LogNotifier(args.notify_log)
+    notifier: Notifier = LogNotifier(args.notify_log)
+    telegram = TelegramNotifier.from_env()
+    if telegram is not None:
+        notifier = FanoutNotifier(notifier, telegram)
+        print("  텔레그램 알림 활성")
+
+    def notify(subject: str, body: str, severity: str) -> None:
+        delivery = notifier.send(Notification(subject, body, severity))
+        if not delivery.delivered:
+            print(f"  알림 전송 실패({subject}): {delivery.error_code}", file=sys.stderr)
+
     if kill:
-        notifier.send(
-            Notification("kill_switch_active", f"KILL_SWITCH 존재 -> 중단 ({run_id})", "critical")
-        )
+        notify("kill_switch_active", f"KILL_SWITCH 존재 -> 중단 ({run_id})", "critical")
     safety = SafetyContext(
         environment=runtime.environment,
         dry_run=runtime.dry_run,
@@ -281,18 +292,16 @@ def _execute_live(
             daily_return=daily_return, regime_policy=policy,
         )
     except SafetyBlocked as blocked:
-        notifier.send(
-            Notification("execution_blocked", f"{run_id} 차단: {blocked.reasons}", "warning")
-        )
+        notify("execution_blocked", f"{run_id} 차단: {blocked.reasons}", "warning")
         print(f"  안전 게이트 차단: {blocked.reasons}")
         return 3
     except KisApiError as error:
-        notifier.send(Notification("submit_error", f"{run_id} 제출 오류: {error}", "error"))
+        notify("submit_error", f"{run_id} 제출 오류: {error}", "error")
         print(f"  KIS 제출 오류(장종료 등): {error}")
         return 3
     nav = float(result.final_account.nav)
     summary = f"{run_id}: 제출 {len(result.broker_orders)}건, 최종 NAV ${nav:,.0f}"
-    notifier.send(Notification("rebalance_complete", summary, "info"))
+    notify("rebalance_complete", summary, "info")
     print(f"  run_id: {run_id}")
     print(f"  제출된 주문 {len(result.broker_orders)}건:")
     for order in result.broker_orders:

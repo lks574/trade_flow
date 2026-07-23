@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 from zoneinfo import ZoneInfo
 
 _US_EASTERN = ZoneInfo("America/New_York")
@@ -111,3 +113,100 @@ class LogNotifier:
                     delivered=False, provider_message_id=None, error_code=str(error)
                 )
         return DeliveryResult(delivered=True, provider_message_id=None, error_code=None)
+
+
+class TelegramNotifier:
+    """텔레그램 Bot API sendMessage 기반 외부 알림 채널(§3.7, §8 미결 7번).
+
+    자격증명은 KIS와 같은 .env 패턴: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID.
+    전송 실패는 예외 대신 DeliveryResult(delivered=False)로 반환하며, 오류 문자열에
+    토큰이 노출되지 않도록 마스킹한다. 실행 흐름을 막지 않는 best-effort 채널이다.
+    """
+
+    _SEVERITY_ICONS = {"critical": "🚨", "error": "❌", "warning": "⚠️", "info": "ℹ️"}
+    _API_BASE = "https://api.telegram.org"
+
+    def __init__(
+        self,
+        bot_token: str,
+        chat_id: str,
+        *,
+        session: Any = None,
+        timeout_seconds: float = 10.0,
+    ) -> None:
+        self._token = bot_token
+        self._chat_id = chat_id
+        self._session = session
+        self._timeout = timeout_seconds
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str] | None = None) -> TelegramNotifier | None:
+        """TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID가 둘 다 있으면 생성, 아니면 None."""
+        source = os.environ if env is None else env
+        token = source.get("TELEGRAM_BOT_TOKEN", "").strip()
+        chat_id = source.get("TELEGRAM_CHAT_ID", "").strip()
+        if not token or not chat_id:
+            return None
+        return cls(token, chat_id)
+
+    def _get_session(self) -> Any:
+        if self._session is None:
+            import requests  # 지연 import (live extra)
+
+            self._session = requests.Session()
+        return self._session
+
+    def _redact(self, text: str) -> str:
+        return text.replace(self._token, "***") if self._token else text
+
+    def send(self, notification: Notification) -> DeliveryResult:
+        icon = self._SEVERITY_ICONS.get(notification.severity, "ℹ️")
+        text = f"{icon} [{notification.severity}] {notification.subject}\n{notification.body}"
+        url = f"{self._API_BASE}/bot{self._token}/sendMessage"
+        try:
+            response = self._get_session().post(
+                url,
+                json={"chat_id": self._chat_id, "text": text},
+                timeout=self._timeout,
+            )
+            payload = response.json()
+        except Exception as error:  # noqa: BLE001 - 알림 실패는 실행을 막지 않는다
+            return DeliveryResult(
+                delivered=False,
+                provider_message_id=None,
+                error_code=self._redact(f"{type(error).__name__}: {error}"),
+            )
+        if not payload.get("ok"):
+            description = payload.get("description", f"http {response.status_code}")
+            return DeliveryResult(
+                delivered=False, provider_message_id=None, error_code=self._redact(str(description))
+            )
+        message_id = payload.get("result", {}).get("message_id")
+        return DeliveryResult(
+            delivered=True,
+            provider_message_id=None if message_id is None else str(message_id),
+            error_code=None,
+        )
+
+
+class FanoutNotifier:
+    """여러 Notifier에 순차 발송하고 실패를 집계한다.
+
+    delivered는 전부 성공일 때만 True. 부분 실패의 error_code를 모아 반환해
+    호출부가 실패를 인지할 수 있게 한다(전송 실패 무시 금지 — 리뷰 M4).
+    """
+
+    def __init__(self, *notifiers: Notifier) -> None:
+        if not notifiers:
+            raise ValueError("FanoutNotifier requires at least one notifier")
+        self._notifiers = notifiers
+
+    def send(self, notification: Notification) -> DeliveryResult:
+        results = [notifier.send(notification) for notifier in self._notifiers]
+        failures = [r.error_code or "unknown" for r in results if not r.delivered]
+        if failures:
+            return DeliveryResult(
+                delivered=False, provider_message_id=None, error_code="; ".join(failures)
+            )
+        message_id = next((r.provider_message_id for r in results if r.provider_message_id), None)
+        return DeliveryResult(delivered=True, provider_message_id=message_id, error_code=None)
