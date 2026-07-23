@@ -2,10 +2,29 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Protocol
+from zoneinfo import ZoneInfo
+
+_US_EASTERN = ZoneInfo("America/New_York")
+
+
+def within_us_market_hours(now: datetime) -> bool:
+    """미국 정규장(평일 09:30~16:00 ET) 여부. tz-aware datetime 필요.
+
+    미국 공휴일은 반영하지 않는다(브로커가 장종료로 fail-closed). SafetyContext의
+    within_execution_window 입력으로 쓰며, KIS 장종료 거부에 앞선 예방적 게이트다.
+    """
+    if now.tzinfo is None:
+        raise ValueError("now must be timezone-aware")
+    eastern = now.astimezone(_US_EASTERN)
+    if eastern.weekday() >= 5:  # 토(5)·일(6)
+        return False
+    open_time = eastern.replace(hour=9, minute=30, second=0, microsecond=0)
+    close_time = eastern.replace(hour=16, minute=0, second=0, microsecond=0)
+    return open_time <= eastern <= close_time
 
 
 @dataclass(frozen=True)

@@ -40,3 +40,29 @@ def test_log_notifier_writes_line(tmp_path) -> None:
     assert result.delivered
     content = log.read_text()
     assert "rebalance_complete" in content and "제출 5건" in content and "[info]" in content
+
+
+def test_within_us_market_hours() -> None:
+    from datetime import UTC, datetime
+
+    from trade_flow.operations import within_us_market_hours
+
+    # 2026-07-23은 목요일. 10:00 ET = 14:00 UTC -> 개장.
+    assert within_us_market_hours(datetime(2026, 7, 23, 14, 0, tzinfo=UTC))
+    # 08:00 ET = 12:00 UTC -> 개장 전.
+    assert not within_us_market_hours(datetime(2026, 7, 23, 12, 0, tzinfo=UTC))
+    # 17:00 ET = 21:00 UTC -> 폐장 후.
+    assert not within_us_market_hours(datetime(2026, 7, 23, 21, 0, tzinfo=UTC))
+    # 2026-07-25는 토요일 -> 시각 무관 폐장.
+    assert not within_us_market_hours(datetime(2026, 7, 25, 14, 0, tzinfo=UTC))
+
+
+def test_within_us_market_hours_requires_tz() -> None:
+    from datetime import datetime
+
+    import pytest
+
+    from trade_flow.operations import within_us_market_hours
+
+    with pytest.raises(ValueError, match="timezone-aware"):
+        within_us_market_hours(datetime(2026, 7, 23, 14, 0))  # noqa: DTZ001

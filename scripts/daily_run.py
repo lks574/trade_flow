@@ -32,7 +32,12 @@ from trade_flow.db import OrderRepository, RunRepository, initialize_database  #
 from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.execution import execute_rebalance  # noqa: E402
 from trade_flow.execution.planner import plan_orders  # noqa: E402
-from trade_flow.operations import LogNotifier, NavHistory, Notification  # noqa: E402
+from trade_flow.operations import (  # noqa: E402
+    LogNotifier,
+    NavHistory,
+    Notification,
+    within_us_market_hours,
+)
 from trade_flow.risk import RegimePolicy, apply_risk_policy, build_regime_states  # noqa: E402
 from trade_flow.safety import (  # noqa: E402
     SafetyContext,
@@ -65,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runtime", type=Path, default=Path("configs/runtime.toml"))
     parser.add_argument("--notify-log", type=Path, default=Path("data/daily_run.log"))
     parser.add_argument("--nav-history", type=Path, default=Path("data/nav_history.json"))
+    parser.add_argument("--exchange-map", type=Path, default=Path("data/exchange_map.json"))
     parser.add_argument(
         "--max-staleness-days",
         type=int,
@@ -99,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  경고: 데이터가 {staleness}일 지남 -> --refresh-data 권장. 라이브 매수 차단됨.")
 
     try:
-        broker = KisBroker(build_client())
+        broker = KisBroker(build_client(), exchange_map_path=args.exchange_map)
         account = broker.account_snapshot()
     except (KisConfigError, KisApiError) as error:
         print(f"[KIS 오류] {error}", file=sys.stderr)
@@ -139,10 +145,16 @@ def main(argv: list[str] | None = None) -> int:
     selected = ", ".join(f"{s}={float(w):.1%}" for s, w in sorted(targets.items()))
     print(f"\n선정 {len(targets)}종목: {selected}")
 
+    from datetime import UTC, datetime
+
+    within_window = within_us_market_hours(datetime.now(UTC))
+    print(f"실행창(미국 정규장 개장): {within_window}")
+
     if args.execute:
         return _execute_live(
             config, broker, strategy_result, state or _missing_regime(end),
-            policy, daily_return, account, end, args, data_fresh=data_fresh,
+            policy, daily_return, account, end, args,
+            data_fresh=data_fresh, within_window=within_window,
         )
 
     print("시세 조회 중(선정+보유)...")
@@ -212,7 +224,7 @@ def _refresh_data(args) -> None:
 
 def _execute_live(
     config, broker, strategy_result, state, policy, daily_return, account, end, args,
-    *, data_fresh,
+    *, data_fresh, within_window,
 ):
     """라이브 주문 제출(모의). execute_rebalance가 시세·계획·안전게이트·제출을 처리한다."""
     print("\n=== LIVE 제출 (execute_rebalance) ===")
@@ -256,7 +268,7 @@ def _execute_live(
         data_fresh=data_fresh,
         account_reconciled=True,
         open_orders_reconciled=open_orders_reconciled,
-        within_execution_window=True,
+        within_execution_window=within_window,
         daily_return=daily_return,
         daily_loss_limit=config.risk.daily_loss_limit_fraction,
     )

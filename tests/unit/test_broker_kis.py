@@ -301,3 +301,28 @@ def test_kis_broker_open_orders_and_cancel_open() -> None:
     assert opens[0] == {"odno": "999", "symbol": "AAPL", "quantity": 2, "exchange_code": "NASD"}
     broker.cancel_open(opens[0])
     assert fake.cancel_calls[-1] == ("AAPL", "999", 2, "NASD")
+
+
+def test_kis_broker_persistent_exchange_map(tmp_path) -> None:
+    from trade_flow.broker import KisBroker
+    from trade_flow.broker.kis import KisApiError
+
+    path = tmp_path / "exch.json"
+
+    class _NyseOnly(_FakeClient):
+        def price_raw(self, symbol, exchange="NASDAQ"):
+            if exchange == "NYSE":
+                return {"rt_cd": "0", "output": {"last": "100.0"}}
+            raise KisApiError("no data")
+
+    broker1 = KisBroker(_NyseOnly(), exchange_map_path=path)
+    assert broker1.resolve_exchange("GS") == "NYSE"
+    assert path.exists()  # 캐시 저장됨
+
+    # 새 브로커: 프로브하면 무조건 실패하는 클라이언트라도 파일 캐시로 해결.
+    class _AlwaysFail(_FakeClient):
+        def price_raw(self, symbol, exchange="NASDAQ"):
+            raise KisApiError("should not be called")
+
+    broker2 = KisBroker(_AlwaysFail(), exchange_map_path=path)
+    assert broker2.resolve_exchange("GS") == "NYSE"  # 재탐색 없이 캐시 사용

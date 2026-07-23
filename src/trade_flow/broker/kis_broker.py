@@ -10,8 +10,10 @@ USD 환산: NAV(USD) = 총자산(KRW, tot_asst_amt) / USD 환율(frst_bltn_exrt)
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from types import MappingProxyType
 
 from trade_flow.broker.kis import KisApiError, KisClient
@@ -44,11 +46,15 @@ class KisBroker:
         client: KisClient,
         *,
         exchange_map: dict[str, str] | None = None,
+        exchange_map_path: Path | None = None,
         default_exchange: str = "NASDAQ",
         poll_interval_seconds: float = 2.0,
     ) -> None:
         self._client = client
-        self._exchange_map = exchange_map or {}
+        # 영속 캐시(있으면) + 주입 맵. 매 실행 거래소 재탐색을 피한다.
+        self._exchange_map_path = Path(exchange_map_path) if exchange_map_path else None
+        self._exchange_map = self._load_exchange_map()
+        self._exchange_map.update(exchange_map or {})
         self._default_exchange = default_exchange
         self._poll_interval = poll_interval_seconds
         cred = client._cred  # noqa: SLF001
@@ -59,6 +65,24 @@ class KisBroker:
         self._intent_index: dict[str, str] = {}  # intent_id -> ODNO
 
     _CANDIDATE_EXCHANGES = ("NASDAQ", "NYSE", "AMEX")
+
+    def _load_exchange_map(self) -> dict[str, str]:
+        if self._exchange_map_path is None:
+            return {}
+        try:
+            data = json.loads(self._exchange_map_path.read_text())
+        except (OSError, ValueError):
+            return {}
+        return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+
+    def _save_exchange_map(self) -> None:
+        if self._exchange_map_path is None:
+            return
+        try:
+            self._exchange_map_path.parent.mkdir(parents=True, exist_ok=True)
+            self._exchange_map_path.write_text(json.dumps(dict(sorted(self._exchange_map.items()))))
+        except OSError:
+            pass  # 캐시 저장 실패는 비치명적(다음에 재탐색)
 
     def _exchange(self, symbol: str) -> str:
         return self._exchange_map.get(symbol, self._default_exchange)
@@ -77,8 +101,10 @@ class KisBroker:
             last = _dec((data.get("output") or {}).get("last"))
             if last > 0:
                 self._exchange_map[symbol] = exchange
+                self._save_exchange_map()
                 return exchange
         self._exchange_map[symbol] = self._default_exchange
+        self._save_exchange_map()
         return self._default_exchange
 
     # --- 읽기 ---
