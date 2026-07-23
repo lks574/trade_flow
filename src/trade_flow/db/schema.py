@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS prices (
@@ -101,15 +101,20 @@ CREATE TABLE IF NOT EXISTS snapshots (
 );
 
 -- 추천 리포트 영속화(사후 추적용). as_of_date는 신호 기준일(데이터 최종 세션).
+-- variant: 'momentum'(순수 모멘텀) | 'quality_gated'(퀄리티 게이트+섹터상한) —
+-- 두 군의 사후 성과를 track_recommendations.py가 대조 채점한다.
 CREATE TABLE IF NOT EXISTS recommendations (
     as_of_date TEXT NOT NULL,
+    variant TEXT NOT NULL DEFAULT 'momentum',
     rank INTEGER NOT NULL CHECK (rank > 0),
     symbol TEXT NOT NULL,
     total_score TEXT NOT NULL,
     momentum_return TEXT NOT NULL,
     traded INTEGER NOT NULL CHECK (traded IN (0, 1)),
+    quality_pass INTEGER,
+    quality_fail TEXT,
     created_at TEXT NOT NULL,
-    PRIMARY KEY (as_of_date, symbol)
+    PRIMARY KEY (as_of_date, variant, symbol)
 );
 
 -- 목표가 예보 영속화(캘리브레이션 채점용). 구간이 명목 68%를 지키는지 사후 검증.
@@ -135,11 +140,45 @@ CREATE TABLE IF NOT EXISTS price_targets (
 """
 
 
+def _migrate_recommendations_v6(connection: sqlite3.Connection) -> None:
+    """v5 recommendations(variant 없음)를 v6 스키마로 재구축(기존 행은 momentum)."""
+    columns = [row[1] for row in connection.execute("PRAGMA table_info(recommendations)")]
+    if not columns or "variant" in columns:
+        return
+    connection.executescript(
+        """
+        ALTER TABLE recommendations RENAME TO recommendations_v5;
+        CREATE TABLE recommendations (
+            as_of_date TEXT NOT NULL,
+            variant TEXT NOT NULL DEFAULT 'momentum',
+            rank INTEGER NOT NULL CHECK (rank > 0),
+            symbol TEXT NOT NULL,
+            total_score TEXT NOT NULL,
+            momentum_return TEXT NOT NULL,
+            traded INTEGER NOT NULL CHECK (traded IN (0, 1)),
+            quality_pass INTEGER,
+            quality_fail TEXT,
+            created_at TEXT NOT NULL,
+            PRIMARY KEY (as_of_date, variant, symbol)
+        );
+        INSERT INTO recommendations (
+            as_of_date, variant, rank, symbol, total_score, momentum_return,
+            traded, created_at
+        )
+        SELECT as_of_date, 'momentum', rank, symbol, total_score, momentum_return,
+               traded, created_at
+        FROM recommendations_v5;
+        DROP TABLE recommendations_v5;
+        """
+    )
+
+
 def initialize_database(path: str | Path) -> Path:
     database_path = Path(path)
     database_path.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(database_path) as connection:
         connection.execute("PRAGMA foreign_keys = ON")
+        _migrate_recommendations_v6(connection)
         connection.executescript(_SCHEMA)
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         connection.commit()

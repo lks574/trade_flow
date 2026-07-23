@@ -33,11 +33,17 @@ from trade_flow.db import (  # noqa: E402
 )
 from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.operations import Notification, TelegramNotifier  # noqa: E402
-from trade_flow.research import MarketContext, compute_price_target  # noqa: E402
+from trade_flow.research import (  # noqa: E402
+    FundamentalsFetcher,
+    MarketContext,
+    build_gated_selection,
+    compute_price_target,
+)
 from trade_flow.sentiment.headline import score_headlines  # noqa: E402
 from trade_flow.strategy import signal  # noqa: E402
 
 TARGET_HORIZONS = (5, 21)  # 1주·1개월(거래일)
+SECTOR_CAP = 2  # quality_gated 리스트의 동일 섹터 상한(단일 매크로 베팅 방지)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -115,6 +121,19 @@ def main(argv: list[str] | None = None) -> int:
     traded = set(result.target_weights)  # 자동매매가 실제로 담는 상위 N
     top = ranked[: args.top]
 
+    # 퀄리티 게이트 리스트: 게이트(ROE·마진·부채) 통과 × 모멘텀 순 × 섹터 상한.
+    # 모멘텀군과 게이트군의 사후 성과는 추적 리포트가 대조 채점한다(전향적 검증).
+    fetcher = FundamentalsFetcher(Path(args.db).parent / "fundamentals_cache.json")
+    gated = build_gated_selection(
+        (fetcher.assess(sym, provider_of.get(sym)) for sym, _score in ranked),
+        limit=args.top,
+        sector_cap=SECTOR_CAP,
+    )
+    quality_of = {sym: fetcher.assess(sym, provider_of.get(sym)) for sym, _score in top}
+    fetcher.save()
+    gated_symbols = [assessment.symbol for assessment in gated]
+    score_of = dict(result.scores)
+
     fundamentals: dict[str, dict] = {}
     if not args.no_fundamentals:
         print(f"펀더멘털 조회 중(상위 {len(top)}종목, yfinance)...")
@@ -123,15 +142,29 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n주간 종목 추천 (정량 팩터) — 기준일 {end}, 적격 {len(ranked)}종목 중 상위 {args.top}")
     print("팩터 가중치: 모멘텀 0.40 / 추세 0.25 / RSI 0.15 / MACD 0.20")
     print(f"{'순위':>3} {'종목':<6} {'섹터':<22} {'총점':>5} {'모멘텀':>8} "
-          f"{'PER':>6} {'시총$B':>7} {'배당%':>5} 매매")
+          f"{'PER':>6} {'시총$B':>7} {'배당%':>5} 매매 퀄리티")
     for rank, (symbol, score) in enumerate(top, start=1):
         info = fundamentals.get(symbol, {})
-        star = "★" if symbol in traded else ""
+        star = "★" if symbol in traded else " "
+        assessment = quality_of.get(symbol)
+        quality_text = (
+            "✅" if assessment and assessment.passed
+            else "❌" + ",".join(assessment.fail_reasons) if assessment else "—"
+        )
         print(
             f"{rank:>3} {symbol:<6} {_short(info.get('sector'), 22):<22} "
             f"{float(score.total):>5.3f} {float(score.momentum_return):>+8.2%} "
             f"{_num(info.get('pe')):>6} {_bil(info.get('mcap')):>7} "
-            f"{_pct(info.get('div')):>5} {star}"
+            f"{_pct(info.get('div')):>5} {star}  {quality_text}"
+        )
+
+    print(f"\n퀄리티 게이트 리스트 (통과 {sum(1 for a in gated if a.passed)}종목"
+          f" × 모멘텀 순 × 섹터상한 {SECTOR_CAP}) — 전향적 추적용:")
+    for rank, assessment in enumerate(gated, start=1):
+        score = score_of[assessment.symbol]
+        print(
+            f"{rank:>3} {assessment.symbol:<6} {_short(assessment.sector, 22):<22} "
+            f"{float(score.total):>5.3f} {float(score.momentum_return):>+8.2%}"
         )
     print(f"\n★ = 자동매매가 이번 주 담는 상위 {config.strategy.main_count}. 나머지는 후보 순위.")
     print("펀더멘털은 현재 시점 값(리포트 기준일과 무관). 기술적 팩터 랭킹 + 참고용 펀더멘털이며,")
@@ -139,7 +172,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if not args.no_save:
         initialize_database(args.db)  # recommendations 테이블 보장(멱등)
-        RecommendationRepository(args.db).record(
+        repository = RecommendationRepository(args.db)
+        repository.record(
             end,
             [
                 RecommendationEntry(
@@ -148,16 +182,42 @@ def main(argv: list[str] | None = None) -> int:
                     total_score=score.total,
                     momentum_return=score.momentum_return,
                     traded=symbol in traded,
+                    quality_pass=(
+                        quality_of[symbol].passed if symbol in quality_of else None
+                    ),
+                    quality_fail=(
+                        ",".join(quality_of[symbol].fail_reasons) or None
+                        if symbol in quality_of
+                        else None
+                    ),
                 )
                 for rank, (symbol, score) in enumerate(top, start=1)
             ],
         )
-        print(f"recommendations 테이블 저장 완료(기준일 {end}, {len(top)}종목).")
+        repository.record(
+            end,
+            [
+                RecommendationEntry(
+                    rank=rank,
+                    symbol=assessment.symbol,
+                    total_score=score_of[assessment.symbol].total,
+                    momentum_return=score_of[assessment.symbol].momentum_return,
+                    traded=False,
+                    quality_pass=True,
+                    quality_fail=None,
+                )
+                for rank, assessment in enumerate(gated, start=1)
+            ],
+            variant="quality_gated",
+        )
+        print(f"recommendations 저장 완료(기준일 {end}, momentum {len(top)}"
+              f" + quality_gated {len(gated)}종목).")
 
-    # --- 목표가 예보(확률 구간) ---
+    # --- 목표가 예보(확률 구간) --- momentum top + quality_gated 합집합에 대해 산출.
+    forecast_symbols = list(dict.fromkeys([s for s, _score in top] + gated_symbols))
     context = _market_context(connection, end)
     # 백필(--as-of)은 과거 뉴스가 없어 감정을 생략한다(점수 None으로 정직하게 기록).
-    sentiments = {} if args.as_of else _fetch_sentiment([s for s, _ in top], provider_of)
+    sentiments = {} if args.as_of else _fetch_sentiment(forecast_symbols, provider_of)
     macro_flags: list[str] = []
     for sentiment in sentiments.values():
         for flag in sentiment.macro_flags:
@@ -166,7 +226,7 @@ def main(argv: list[str] | None = None) -> int:
 
     targets = []
     articles: dict[str, int] = {}
-    for symbol, _score in top:
+    for symbol in forecast_symbols:
         closes, highs, lows = _series_from_snapshot(snapshot, symbol)
         sentiment = sentiments.get(symbol)
         if sentiment is not None:
@@ -233,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
             main_count=config.strategy.main_count,
             targets_by_symbol=by_symbol, sentiments=sentiments,
             context=context, macro_flags=tuple(macro_flags),
+            gated=gated, score_of=score_of, quality_of=quality_of,
         )
         delivery = telegram.send(Notification("주간 종목 추천", body, "info"))
         if not delivery.delivered:
@@ -249,6 +310,9 @@ def _telegram_body(
     sentiments: dict[str, object] | None = None,
     context: MarketContext | None = None,
     macro_flags: tuple[str, ...] = (),
+    gated: list | None = None,
+    score_of: dict | None = None,
+    quality_of: dict | None = None,
 ) -> str:
     """모바일 가독성 위주의 컴팩트 리포트(모노스페이스 표 대신 줄 단위)."""
     lines = [f"기준일 {end} · 적격 {eligible}종목 중 상위 {len(top)}"]
@@ -264,13 +328,19 @@ def _telegram_body(
     lines.append("")
     targets_by_symbol = targets_by_symbol or {}
     sentiments = sentiments or {}
+    quality_of = quality_of or {}
     for rank, (symbol, score) in enumerate(top, start=1):
         info = fundamentals.get(symbol, {})
         star = " ★" if symbol in traded else ""
         sector = _short(info.get("sector"), 18)
+        assessment = quality_of.get(symbol)
+        quality_text = (
+            " ✅" if assessment and assessment.passed
+            else f" ❌{','.join(assessment.fail_reasons)}" if assessment else ""
+        )
         lines.append(
             f"{rank}. {symbol}{star} {float(score.total):.3f} "
-            f"| 모멘텀 {float(score.momentum_return):+.1%} | {sector}"
+            f"| 모멘텀 {float(score.momentum_return):+.1%} | {sector}{quality_text}"
         )
         symbol_targets = targets_by_symbol.get(symbol, [])
         sentiment = sentiments.get(symbol)
@@ -290,8 +360,19 @@ def _telegram_body(
             extras.append(f"애널목표 ${analyst:,.0f}")
         if extras:
             lines.append(f"   {' · '.join(extras)}")
-    lines.append(f"\n★=자동매매 top-{main_count}")
-    lines.append("기술적 팩터 랭킹 + 확률 예보(점 예측 아님). 구간 적중률은 주간 추적에서 채점.")
+    if gated and score_of:
+        lines.append("\n🛡 퀄리티 게이트 리스트 (ROE·마진·부채 통과 × 섹터상한):")
+        for rank, assessment in enumerate(gated, start=1):
+            score = score_of[assessment.symbol]
+            lines.append(
+                f"{rank}. {assessment.symbol} "
+                f"모멘텀 {float(score.momentum_return):+.1%} "
+                f"| {_short(assessment.sector, 16)}"
+            )
+    lines.append(f"\n★=자동매매 top-{main_count}, ✅/❌=퀄리티 게이트")
+    lines.append(
+        "기술적 팩터 랭킹 + 확률 예보(점 예측 아님). 두 리스트 성과는 주간 추적에서 대조 채점."
+    )
     return "\n".join(lines)
 
 

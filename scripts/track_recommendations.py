@@ -228,18 +228,43 @@ def render_markdown(
         lines.append("- 확정된 추천이 아직 없다(모두 5거래일 미경과).")
     lines.append("")
 
+    # 모멘텀군 vs 퀄리티게이트군 대조 채점 (게이트 승격 여부의 판단 근거).
+    variants = sorted({t.rec.variant for t in tracked})
+    if len(variants) > 1:
+        lines += ["## 리스트 대조 (momentum vs quality_gated)", ""]
+        labels = {"momentum": "모멘텀", "quality_gated": "퀄리티 게이트"}
+        for variant in variants:
+            cohort = [t for t in tracked if t.rec.variant == variant]
+            cohort_settled = [t for t in cohort if t.returns[5] is not None]
+            if not cohort_settled:
+                lines.append(f"- {labels.get(variant, variant)}: 확정 0건"
+                             f" (미경과 {len(cohort)}건)")
+                continue
+            cohort_hits = sum(1 for t in cohort_settled if t.returns[5] > 0)
+            cohort_avg = statistics.mean(t.returns[5] for t in cohort_settled)
+            lines.append(
+                f"- {labels.get(variant, variant)}: 적중"
+                f" {cohort_hits}/{len(cohort_settled)}"
+                f" ({cohort_hits / len(cohort_settled):.0%}),"
+                f" +5일 평균 {cohort_avg:+.2%}"
+                f" (미경과 {len(cohort) - len(cohort_settled)}건)"
+            )
+        lines.append("")
+
     if target_outcomes:
         lines += _calibration_lines(target_outcomes)
 
-    by_date: dict[date, list[TrackedRow]] = {}
+    by_group: dict[tuple[date, str], list[TrackedRow]] = {}
     for row in tracked:
-        by_date.setdefault(row.rec.as_of_date, []).append(row)
-    for as_of in sorted(by_date, reverse=True):
-        rows = sorted(by_date[as_of], key=lambda r: r.rec.rank)
+        by_group.setdefault((row.rec.as_of_date, row.rec.variant), []).append(row)
+    variant_labels = {"momentum": "모멘텀", "quality_gated": "퀄리티 게이트"}
+    for as_of, variant in sorted(by_group, key=lambda k: (k[0], k[1]), reverse=True):
+        rows = sorted(by_group[(as_of, variant)], key=lambda r: r.rec.rank)
         median_5d = rows[0].median_5d
         median_text = "⏳" if median_5d is None else f"{median_5d:+.2%}"
         lines += [
-            f"## 기준일 {as_of} (유니버스 +5일 중앙값 {median_text})",
+            f"## 기준일 {as_of} — {variant_labels.get(variant, variant)}"
+            f" (유니버스 +5일 중앙값 {median_text})",
             "",
             "| 순위 | 종목 | ★ | 점수 | 모멘텀 | +1일 | +3일 | +5일 | 판정 |",
             "|---:|---|:-:|---:|---:|---:|---:|---:|:-:|",

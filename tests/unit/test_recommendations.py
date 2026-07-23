@@ -52,6 +52,57 @@ def test_dates_are_kept_separate(tmp_path) -> None:
     assert len(repo.all()) == 2
 
 
+def test_variants_are_independent(tmp_path) -> None:
+    db = initialize_database(tmp_path / "ops.db")
+    repo = RecommendationRepository(db)
+    # 같은 기준일·같은 종목이 두 리스트에 공존할 수 있다(SOLV처럼).
+    repo.record(date(2026, 7, 22), [_entry(1, "SOLV"), _entry(2, "MPC")])
+    repo.record(date(2026, 7, 22), [_entry(1, "SOLV")], variant="quality_gated")
+    stored = repo.all()
+    assert [(r.variant, r.symbol) for r in stored] == [
+        ("momentum", "SOLV"),
+        ("momentum", "MPC"),
+        ("quality_gated", "SOLV"),
+    ]
+    # variant별 교체는 서로를 건드리지 않는다.
+    repo.record(date(2026, 7, 22), [_entry(1, "PRU")], variant="quality_gated")
+    stored = repo.all()
+    assert [(r.variant, r.symbol) for r in stored] == [
+        ("momentum", "SOLV"),
+        ("momentum", "MPC"),
+        ("quality_gated", "PRU"),
+    ]
+
+
+def test_v5_table_migrates_to_v6_with_variant(tmp_path) -> None:
+    import sqlite3
+
+    # v5 스키마(variant 없음)로 기존 데이터 생성
+    db = tmp_path / "ops.db"
+    with sqlite3.connect(db) as connection:
+        connection.executescript(
+            """
+            CREATE TABLE recommendations (
+                as_of_date TEXT NOT NULL,
+                rank INTEGER NOT NULL,
+                symbol TEXT NOT NULL,
+                total_score TEXT NOT NULL,
+                momentum_return TEXT NOT NULL,
+                traded INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                PRIMARY KEY (as_of_date, symbol)
+            );
+            INSERT INTO recommendations VALUES
+                ('2026-07-15', 1, 'MPC', '0.83', '0.40', 1, '2026-07-15T00:00:00Z');
+            """
+        )
+    initialize_database(db)  # v6 마이그레이션 수행
+    stored = RecommendationRepository(db).all()
+    assert len(stored) == 1
+    assert stored[0].variant == "momentum" and stored[0].symbol == "MPC"
+    assert stored[0].quality_pass is None
+
+
 def test_price_target_repository_roundtrip(tmp_path) -> None:
     from trade_flow.db import PriceTargetRepository
     from trade_flow.research import PriceTarget
