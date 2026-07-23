@@ -200,6 +200,25 @@ def _quality_report(
                 )
             )
 
+    # 상장 후 내부 결측(interior_gap): 심볼이 실제로 존재한 구간(첫~마지막 관측 세션) 안에서
+    # 빠진 세션은 데이터 공백이다. 상장 전(첫 관측 이전)·상폐 후(마지막 관측 이후) 부재는
+    # 정상이므로 제외한다. 세션별 sub-snapshot 검증을 제거한 뒤 이 결측을 잡는 fail-closed 검사.
+    for symbol in sorted(set(expected_symbols)):
+        symbol_dates = observed[symbol]
+        if not symbol_dates:
+            continue
+        first_seen, last_seen = min(symbol_dates), max(symbol_dates)
+        for session_date in completed_sessions:
+            if first_seen <= session_date <= last_seen and session_date not in symbol_dates:
+                issues.append(
+                    QualityIssue(
+                        "interior_gap",
+                        "expected session missing within symbol's listed interval",
+                        symbol,
+                        session_date,
+                    )
+                )
+
     latest = completed_sessions[-1] if completed_sessions else None
     return QualityReport(
         as_of=as_of,

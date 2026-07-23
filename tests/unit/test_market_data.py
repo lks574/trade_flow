@@ -95,3 +95,34 @@ def test_snapshot_rejects_two_sources_for_same_canonical_session() -> None:
 
     with pytest.raises(DataQualityError, match="duplicate_bar"):
         snapshot.quality_report.require_valid()
+
+
+def test_quality_report_flags_interior_gap_not_pre_listing_absence() -> None:
+    # 5 세션. GAP 심볼은 세션2가 내부 결측(상장 후 공백) -> interior_gap.
+    # LATE 심볼은 세션2부터 시작(상장 전 부재) -> interior_gap 아님.
+    sessions = [date(2026, 1, 1) + timedelta(days=index) for index in range(5)]
+    as_of = sessions[-1]
+    bars = []
+    for index in (0, 1, 3, 4):
+        bars.append(_bar("GAP", sessions[index]))
+    for index in (2, 3, 4):
+        bars.append(_bar("LATE", sessions[index]))
+
+    snapshot = build_market_data_snapshot(
+        bars,
+        as_of=as_of,
+        expected_sessions=sessions,
+        expected_symbols=["GAP", "LATE"],
+        recent_session_count=1,  # 마지막 세션만 검사 -> 둘 다 존재, missing_recent 없음
+    )
+
+    gaps = [
+        issue
+        for issue in snapshot.quality_report.issues
+        if issue.code == "interior_gap"
+    ]
+    assert len(gaps) == 1
+    assert gaps[0].symbol == "GAP"
+    assert gaps[0].session_date == sessions[2]
+    # LATE는 상장 전 부재이므로 interior_gap 없음.
+    assert all(issue.symbol != "LATE" for issue in gaps)
