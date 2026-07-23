@@ -33,11 +33,15 @@
 
 즉 오버레이는 **급락 방어 장치로는 작동하지만, 변동성 높은 횡보·그라인딩 국면에서 매수차단의 기회비용이 방어 이득을 넘어설 수 있다.**
 
-## 유의사항
+## 유의사항 (Codex 교차검증 반영)
 
-- grade-C 생존편향. 단, **오버레이-vs-없음은 동일 유니버스·기간** 비교라 상대 결론은 절대 수익보다 견고하다.
-- 단일 realization(2016–2026). 2020·2022 각 1회씩만 관측 — 표본이 적다.
-- BUY_BLOCK과 EQUITY_CAP는 모든 구간에서 거의 동일 → 노출 축소(50%)는 매수차단 대비 추가 효과가 미미.
+- grade-C 생존편향. 오버레이-vs-없음은 동일 유니버스·기간 비교라 공통 오차는 줄지만, 오버레이 효과가 당시 선택·퇴출 종목·회복 탄력과 상호작용하므로 **차분에서 자동 소거되지 않는다** → 상대 결론은 "절대 성과보다 덜 취약" 정도로만 본다.
+- **"2022만 예외"는 검사한 7개 창 한정** 표현이다. 두 2020 창과 두 2022 창은 중복이라 독립 사건은 더 적다 → "대부분의 다른 레짐 사건에서도 유효"로 확대 불가.
+- 단일 realization(2016–2026). 표본이 적다.
+- "오버레이 없음"은 문자 그대로 "항상 매수"가 아니라 **레짐만 비활성, 손절·일손실 등 나머지 리스크 정책은 유지**다.
+- 메커니즘("sell low / rebuy high")은 수익/MDD 표만으론 직접 검증되지 않았다 — 체결·현금비중·재진입 가격의 event study 필요(후속).
+- 표의 레짐 "발동" 수는 **VIX·WTI 컨텍스트 날짜(2654) 기준**이며, 실제 주식 세션(2513)에서 신호를 만든 수와 다르다(baseline active 283 중 주식세션 247). 해제 확인일수의 "달력"(주식 거래일 vs 컨텍스트 관측)은 프로덕션에서 명세 필요.
+- BUY_BLOCK과 EQUITY_CAP는 모든 구간에서 거의 동일 → 노출 축소(50%)는 매수차단 대비 추가 효과 미미.
 
 ## 시사점 (결정은 사용자)
 
@@ -67,7 +71,14 @@ whipsaw 완화 가설: 진입은 VIX>30 유지, **해제는 비대칭 임계(VIX
 - 주 효과는 **해제 확인일수 연장(3→10일)**. 비대칭 VIX 임계는 보조.
 - **exit22/5는 실패**: 너무 엄격한 재진입이 2020 V자 회복을 통째로 놓쳐 +49%→−19%. 재진입을 과하게 늦추면 회복 참여를 죽인다 → 명확한 tradeoff.
 
-**결론(잠정)**: 재진입 강화(해제확인 연장 + 완만한 VIX hysteresis)는 whipsaw를 줄이면서 급락 방어를 유지할 수 있는 유망한 방향이다. 단 **파라미터 민감**(과도하면 회복 참여 손실)하고 grade-C 단일 realization이므로, **정책 확정·파라미터 튜닝은 grade-B 전제**. 방향성 승인 후 프로덕션 `build_regime_states`에 `regime_exit_vix_threshold`·`regime_exit_confirmation_days`를 도입(기본값=현행 30/3으로 bit-identical)하는 방식 제안.
+**결론(잠정, 방향성만)**: 재진입 강화(해제확인 연장 + 완만한 VIX hysteresis)는 whipsaw를 줄이면서 급락 방어를 유지할 수 있는 유망한 방향이다. 단 ⚠️ **combo(25/10)는 2020·2022 동일 realization에서 6개 변형을 비교해 고른 in-sample 파라미터 탐색**(holdout·walk-forward·다중비교 보정 없음)이므로 **프로덕션 기본값으로 확정하면 과최적화 위험**이 크다. 또한 "전체적으로 우월"이 아니라 **선택 구간 + 전체 MDD 개선**이며 전체 총수익은 baseline보다 7.2%p 낮다(MDD↔수익 tradeoff). 파라미터 민감(exit22/5는 회복 참여 상실)하고 grade-C 단일 realization이므로 **정책·파라미터 확정은 grade-B 전제**. 방향성 승인 후 프로덕션 `build_regime_states`에 `regime_exit_vix_threshold`·`regime_exit_confirmation_days`를 도입하되 **기본값=현행 30/3으로 bit-identical**(active·valid·false_streak·reasons까지 동일)한 회귀 테스트를 둔다.
+
+## Codex 교차검증 (2026-07-23)
+
+`docs/reviews/2026-07-23-codex-regime-crossreview.md` (gpt-5.6-sol, Orca 오케스트레이션). 판정 **AGREE-WITH-CAVEATS**.
+- **독립 재현·확인**: baseline·combo·exit22/5의 2020·2022·전체 수치를 반올림 단위까지 재현. 로컬 재진입 빌더가 프로덕션 `build_regime_states`의 (active, valid, false_streak)를 2,654일 전부 **0차이**로 복제(해제 조건만 변경) 확인. 백테스트 경로에 look-ahead 없음. regime_states=None이 올바른 대조군임 확인.
+- **반영한 caveat**: "2022만 예외"→검사 창 한정+창 중복, 생존편향 상대결론 완화, combo=in-sample(방향성만), 메커니즘 미검증(event study 필요), 발동수=컨텍스트 날짜(주식세션 247), "오버레이 없음"의 정확한 의미.
+- **프로덕션 도입 권고(승인 후)**: bit-identical 기본값 + reasons 포함 회귀 테스트, 의사결정 시점 고정(signal_date<execution_date 불변식), 해제 streak 달력 명세, grade-B로 전 episode event study, (exit_vix, exit_days) 격자 안정성 + walk-forward/holdout(튜닝 창 제외), 수익/MDD 외 다지표 목적함수.
 
 ## 근거 산출물
 
