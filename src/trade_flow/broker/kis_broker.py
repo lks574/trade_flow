@@ -58,8 +58,28 @@ class KisBroker:
         self._orders: dict[str, dict[str, object]] = {}
         self._intent_index: dict[str, str] = {}  # intent_id -> ODNO
 
+    _CANDIDATE_EXCHANGES = ("NASDAQ", "NYSE", "AMEX")
+
     def _exchange(self, symbol: str) -> str:
         return self._exchange_map.get(symbol, self._default_exchange)
+
+    def resolve_exchange(self, symbol: str) -> str:
+        """심볼의 거래소를 시세 조회로 탐색해 캐시한다(NASD/NYSE/AMEX 매핑 미보유 대응)."""
+        if symbol in self._exchange_map:
+            return self._exchange_map[symbol]
+        from trade_flow.broker.kis import KisApiError
+
+        for exchange in self._CANDIDATE_EXCHANGES:
+            try:
+                data = self._client.price_raw(symbol, exchange=exchange)
+            except KisApiError:
+                continue
+            last = _dec((data.get("output") or {}).get("last"))
+            if last > 0:
+                self._exchange_map[symbol] = exchange
+                return exchange
+        self._exchange_map[symbol] = self._default_exchange
+        return self._default_exchange
 
     # --- 읽기 ---
     def account_snapshot(self) -> AccountSnapshot:
@@ -100,7 +120,7 @@ class KisBroker:
         )
 
     def quote(self, symbol: str) -> Quote:
-        data = self._client.price_raw(symbol, exchange=self._exchange(symbol))
+        data = self._client.price_raw(symbol, exchange=self.resolve_exchange(symbol))
         last = _dec((data.get("output") or {}).get("last"))
         if last <= 0:
             raise KisApiError(f"{symbol} 현재가를 확인할 수 없습니다")

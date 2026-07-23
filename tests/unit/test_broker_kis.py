@@ -270,3 +270,20 @@ def test_order_raw_daytime_session_uses_daytime_endpoint(tmp_path) -> None:
     client.order_raw(symbol="AAPL", side="buy", quantity=1, price="100", session="regular")
     url2, _ = session.post_calls[-1]
     assert url2.endswith("/uapi/overseas-stock/v1/trading/order")
+
+
+def test_kis_broker_resolve_exchange_probes_candidates() -> None:
+    from trade_flow.broker import KisBroker
+    from trade_flow.broker.kis import KisApiError
+
+    class _ExchProbeClient(_FakeClient):
+        def price_raw(self, symbol, exchange="NASDAQ"):
+            # NYSE에서만 유효, 나머지는 오류.
+            if exchange == "NYSE":
+                return {"rt_cd": "0", "output": {"last": "100.0"}}
+            raise KisApiError("no data")
+
+    broker = KisBroker(_ExchProbeClient())
+    assert broker.resolve_exchange("GS") == "NYSE"
+    # 캐시됨: 두 번째 호출은 매핑 재사용.
+    assert broker.resolve_exchange("GS") == "NYSE"
