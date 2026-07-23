@@ -3,6 +3,7 @@
 from trade_flow.db.audit import FillRepository, SnapshotRepository
 from trade_flow.db.execution import OrderRepository, RunRepository
 from trade_flow.db.market_context import MarketContextRepository
+from trade_flow.db.price_targets import PriceTargetRepository, StoredPriceTarget
 from trade_flow.db.prices import PriceRepository
 from trade_flow.db.recommendations import (
     RecommendationEntry,
@@ -18,8 +19,10 @@ __all__ = [
     "MarketContextRepository",
     "PriceRepository",
     "OrderRepository",
+    "PriceTargetRepository",
     "RecommendationEntry",
     "RecommendationRepository",
+    "StoredPriceTarget",
     "RunRepository",
     "SentimentRepository",
     "SnapshotRepository",

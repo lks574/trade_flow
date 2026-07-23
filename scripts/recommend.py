@@ -26,13 +26,18 @@ from trade_flow.data.sqlite_provider import (  # noqa: E402
     SqliteMarketDataProvider,
 )
 from trade_flow.db import (  # noqa: E402
+    PriceTargetRepository,
     RecommendationEntry,
     RecommendationRepository,
     initialize_database,
 )
 from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.operations import Notification, TelegramNotifier  # noqa: E402
+from trade_flow.research import MarketContext, compute_price_target  # noqa: E402
+from trade_flow.sentiment.headline import score_headlines  # noqa: E402
 from trade_flow.strategy import signal  # noqa: E402
+
+TARGET_HORIZONS = (5, 21)  # 1주·1개월(거래일)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -149,10 +154,85 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(f"recommendations 테이블 저장 완료(기준일 {end}, {len(top)}종목).")
 
+    # --- 목표가 예보(확률 구간) ---
+    context = _market_context(connection, end)
+    # 백필(--as-of)은 과거 뉴스가 없어 감정을 생략한다(점수 None으로 정직하게 기록).
+    sentiments = {} if args.as_of else _fetch_sentiment([s for s, _ in top], provider_of)
+    macro_flags: list[str] = []
+    for sentiment in sentiments.values():
+        for flag in sentiment.macro_flags:
+            if flag not in macro_flags:
+                macro_flags.append(flag)
+
+    targets = []
+    articles: dict[str, int] = {}
+    for symbol, _score in top:
+        closes, highs, lows = _series_from_snapshot(snapshot, symbol)
+        sentiment = sentiments.get(symbol)
+        if sentiment is not None:
+            articles[symbol] = sentiment.article_count
+        for horizon in TARGET_HORIZONS:
+            try:
+                targets.append(
+                    compute_price_target(
+                        symbol,
+                        as_of=end,
+                        closes=closes,
+                        highs=highs,
+                        lows=lows,
+                        horizon_sessions=horizon,
+                        sentiment_score=(
+                            round(sentiment.score, 4) if sentiment is not None else None
+                        ),
+                        context=context,
+                    )
+                )
+            except ValueError as error:
+                print(f"  {symbol} 목표가 생략({horizon}세션): {error}")
+
+    vix_text = f"{context.vix:.1f}" if context.vix is not None else "—"
+    wti_text = (
+        f"{context.wti_momentum_21d:+.1%}" if context.wti_momentum_21d is not None else "—"
+    )
+    print(f"\n목표가 예보 — 컨텍스트: VIX {vix_text}, WTI 21일 {wti_text}"
+          + (f", 뉴스 플래그: {', '.join(macro_flags)}" if macro_flags else ""))
+    by_symbol: dict[str, list] = {}
+    for target in targets:
+        by_symbol.setdefault(target.symbol, []).append(target)
+    for symbol, symbol_targets in by_symbol.items():
+        info = fundamentals.get(symbol, {})
+        sentiment = sentiments.get(symbol)
+        senti_text = (
+            f"감정 {sentiment.score:+.2f}({sentiment.article_count}건)"
+            if sentiment is not None and sentiment.article_count
+            else "감정 —"
+        )
+        analyst = info.get("analyst_target")
+        analyst_text = f", 애널리스트 목표 ${analyst:,.0f}(12M)" if analyst else ""
+        basis = symbol_targets[0].basis_close
+        print(f"  {symbol} ${float(basis):,.2f} · {senti_text}{analyst_text}")
+        for target in symbol_targets:
+            label = "1주" if target.horizon_sessions == 5 else "1개월"
+            print(
+                f"    {label}: 기대 ${float(target.expected):,.2f}"
+                f" ({target.expected_return:+.1%})"
+                f" · 68% [{float(target.low_68):,.2f} ~ {float(target.high_68):,.2f}]"
+                f" · 손절 ${float(target.stop):,.2f}"
+            )
+    print("  ※ 점 예측이 아닌 확률 예보. 구간 적중률은 추적 리포트에서 채점된다.")
+
+    if not args.no_save and targets:
+        PriceTargetRepository(args.db).record(
+            targets, sentiment_articles=articles, macro_flags=tuple(macro_flags)
+        )
+        print(f"price_targets 저장 완료({len(targets)}건).")
+
     if telegram is not None:
         body = _telegram_body(
             top, traded, fundamentals, end=end, eligible=len(ranked),
             main_count=config.strategy.main_count,
+            targets_by_symbol=by_symbol, sentiments=sentiments,
+            context=context, macro_flags=tuple(macro_flags),
         )
         delivery = telegram.send(Notification("주간 종목 추천", body, "info"))
         if not delivery.delivered:
@@ -165,9 +245,25 @@ def main(argv: list[str] | None = None) -> int:
 def _telegram_body(
     top, traded: set[str], fundamentals: dict[str, dict], *,
     end: date, eligible: int, main_count: int,
+    targets_by_symbol: dict[str, list] | None = None,
+    sentiments: dict[str, object] | None = None,
+    context: MarketContext | None = None,
+    macro_flags: tuple[str, ...] = (),
 ) -> str:
     """모바일 가독성 위주의 컴팩트 리포트(모노스페이스 표 대신 줄 단위)."""
     lines = [f"기준일 {end} · 적격 {eligible}종목 중 상위 {len(top)}"]
+    if context is not None and context.vix is not None:
+        wti_text = (
+            f", WTI 21일 {context.wti_momentum_21d:+.1%}"
+            if context.wti_momentum_21d is not None
+            else ""
+        )
+        lines.append(f"컨텍스트: VIX {context.vix:.1f}{wti_text}")
+    if macro_flags:
+        lines.append(f"뉴스 플래그: {', '.join(macro_flags)}")
+    lines.append("")
+    targets_by_symbol = targets_by_symbol or {}
+    sentiments = sentiments or {}
     for rank, (symbol, score) in enumerate(top, start=1):
         info = fundamentals.get(symbol, {})
         star = " ★" if symbol in traded else ""
@@ -176,9 +272,79 @@ def _telegram_body(
             f"{rank}. {symbol}{star} {float(score.total):.3f} "
             f"| 모멘텀 {float(score.momentum_return):+.1%} | {sector}"
         )
+        symbol_targets = targets_by_symbol.get(symbol, [])
+        sentiment = sentiments.get(symbol)
+        for target in symbol_targets:
+            label = "1주" if target.horizon_sessions == 5 else "1개월"
+            lines.append(
+                f"   {label} 기대 ${float(target.expected):,.2f}"
+                f"({target.expected_return:+.1%})"
+                f" 68%[{float(target.low_68):,.0f}~{float(target.high_68):,.0f}]"
+                f" 손절 ${float(target.stop):,.2f}"
+            )
+        extras = []
+        if sentiment is not None and getattr(sentiment, "article_count", 0):
+            extras.append(f"감정 {sentiment.score:+.2f}")
+        analyst = info.get("analyst_target")
+        if analyst:
+            extras.append(f"애널목표 ${analyst:,.0f}")
+        if extras:
+            lines.append(f"   {' · '.join(extras)}")
     lines.append(f"\n★=자동매매 top-{main_count}")
-    lines.append("기술적 팩터 랭킹(모멘텀0.40·추세0.25·RSI0.15·MACD0.20). 재검증 후 사용.")
+    lines.append("기술적 팩터 랭킹 + 확률 예보(점 예측 아님). 구간 적중률은 주간 추적에서 채점.")
     return "\n".join(lines)
+
+
+def _market_context(connection: sqlite3.Connection, as_of: date) -> MarketContext:
+    """as_of 기준 VIX 최근 종가와 WTI 21세션 모멘텀(지정학·매크로의 정량 그림자)."""
+
+    def _closes(indicator: str, limit: int) -> list[float]:
+        rows = connection.execute(
+            "SELECT close FROM market_context WHERE indicator=? AND session_date<=? "
+            "ORDER BY session_date DESC LIMIT ?",
+            (indicator, as_of.isoformat(), limit),
+        ).fetchall()
+        return [float(r[0]) for r in rows]
+
+    vix_rows = _closes("VIX", 1)
+    wti_rows = _closes("WTI", 22)
+    vix = vix_rows[0] if vix_rows else None
+    wti_momentum = (
+        wti_rows[0] / wti_rows[-1] - 1.0 if len(wti_rows) >= 22 and wti_rows[-1] > 0 else None
+    )
+    return MarketContext(vix=vix, wti_momentum_21d=wti_momentum)
+
+
+def _fetch_sentiment(symbols: list[str], provider_of: dict[str, str]) -> dict[str, object]:
+    """종목별 최신 뉴스 헤드라인 감정점수(yfinance). 실패는 중립 처리."""
+    try:
+        import yfinance as yf  # lazy: collect extra only
+    except ImportError:
+        return {}
+    out: dict[str, object] = {}
+    for symbol in symbols:
+        try:
+            news = yf.Ticker(provider_of.get(symbol, symbol)).news or []
+            titles = []
+            for item in news:
+                content = item.get("content", item)
+                title = content.get("title")
+                if title:
+                    titles.append(str(title))
+            out[symbol] = score_headlines(titles)
+        except Exception:  # noqa: BLE001 - 감정은 보조 입력, 실패는 중립
+            continue
+    return out
+
+
+def _series_from_snapshot(snapshot, symbol: str):
+    bars = sorted(
+        (b for b in snapshot.prices if b.symbol == symbol), key=lambda b: b.session_date
+    )
+    closes = [b.split_adjusted_close for b in bars]
+    highs = [b.split_adjusted_high for b in bars]
+    lows = [b.split_adjusted_low for b in bars]
+    return closes, highs, lows
 
 
 def _fetch_fundamentals(symbols: list[str], provider_of: dict[str, str]) -> dict[str, dict]:
@@ -196,6 +362,7 @@ def _fetch_fundamentals(symbols: list[str], provider_of: dict[str, str]) -> dict
                 "pe": info.get("trailingPE"),
                 "mcap": info.get("marketCap"),
                 "div": info.get("dividendYield"),
+                "analyst_target": info.get("targetMeanPrice"),
             }
         except Exception:  # noqa: BLE001 - 개별 종목 실패는 무시(— 표시)
             out[symbol] = {}

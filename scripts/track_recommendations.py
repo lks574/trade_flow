@@ -23,7 +23,13 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 
-from trade_flow.db import RecommendationRepository, StoredRecommendation, initialize_database
+from trade_flow.db import (
+    PriceTargetRepository,
+    RecommendationRepository,
+    StoredPriceTarget,
+    StoredRecommendation,
+    initialize_database,
+)
 from trade_flow.operations import Notification, TelegramNotifier
 
 HORIZONS = (1, 3, 5)
@@ -100,6 +106,80 @@ def track(database: Path) -> list[TrackedRow]:
     return tracked
 
 
+@dataclass(frozen=True)
+class TargetOutcome:
+    target: StoredPriceTarget
+    realized: float | None  # horizon 세션 후 수정종가(미경과 시 None)
+
+    @property
+    def in_band(self) -> bool | None:
+        if self.realized is None:
+            return None
+        return float(self.target.low_68) <= self.realized <= float(self.target.high_68)
+
+    @property
+    def direction_hit(self) -> bool | None:
+        """기대 방향(기대가 vs 기준가) 적중 여부. drift≈0(VIX 억제)이면 채점 제외."""
+        if self.realized is None or abs(self.target.drift_daily) < 1e-12:
+            return None
+        expected_up = float(self.target.expected) > float(self.target.basis_close)
+        realized_up = self.realized > float(self.target.basis_close)
+        return expected_up == realized_up
+
+
+def score_targets(database: Path) -> list[TargetOutcome]:
+    outcomes: list[TargetOutcome] = []
+    with sqlite3.connect(database) as connection:
+        for target in PriceTargetRepository(database).all():
+            rows = connection.execute(
+                """
+                SELECT split_adjusted_close FROM prices
+                WHERE symbol=? AND session_date>? ORDER BY session_date LIMIT ?
+                """,
+                (target.symbol, target.as_of_date.isoformat(), target.horizon_sessions),
+            ).fetchall()
+            realized = (
+                float(rows[target.horizon_sessions - 1][0])
+                if len(rows) >= target.horizon_sessions
+                else None
+            )
+            outcomes.append(TargetOutcome(target, realized))
+    return outcomes
+
+
+def _calibration_lines(outcomes: list[TargetOutcome]) -> list[str]:
+    lines = [
+        "## 목표가 예보 캘리브레이션",
+        "",
+        "- 채점 기준: 실현 종가가 68% 구간 안이면 적중 — **명목 68%에 근접해야 예보가 정직한 것**",
+        "- 방향 적중은 drift가 0이 아닌 예보만 채점(VIX 억제 시 방향 예측을 포기하므로)",
+        "",
+    ]
+    for horizon, label in ((5, "1주(+5)"), (21, "1개월(+21)")):
+        rows = [o for o in outcomes if o.target.horizon_sessions == horizon]
+        settled = [o for o in rows if o.realized is not None]
+        pending = len(rows) - len(settled)
+        if not settled:
+            lines.append(f"- {label}: 확정 0건 (미경과 {pending}건)")
+            continue
+        in_band = [o for o in settled if o.in_band]
+        directions = [o for o in settled if o.direction_hit is not None]
+        direction_hits = [o for o in directions if o.direction_hit]
+        direction_text = (
+            f", 방향 적중 {len(direction_hits)}/{len(directions)}"
+            f" ({len(direction_hits) / len(directions):.0%})"
+            if directions
+            else ""
+        )
+        lines.append(
+            f"- {label}: 구간 적중 **{len(in_band)}/{len(settled)}"
+            f" ({len(in_band) / len(settled):.0%})** vs 명목 68%"
+            f"{direction_text} (미경과 {pending}건)"
+        )
+    lines.append("")
+    return lines
+
+
 def _fmt(value: float | None) -> str:
     return "⏳" if value is None else f"{value:+.2%}"
 
@@ -111,7 +191,12 @@ def _verdict(row: TrackedRow) -> str:
     return "✅" if r5 > 0 else "❌"
 
 
-def render_markdown(tracked: list[TrackedRow], *, generated_at: str) -> str:
+def render_markdown(
+    tracked: list[TrackedRow],
+    *,
+    generated_at: str,
+    target_outcomes: list[TargetOutcome] | None = None,
+) -> str:
     settled = [t for t in tracked if t.returns[5] is not None]
     hits = [t for t in settled if t.returns[5] > 0]
     beat_median = [
@@ -142,6 +227,9 @@ def render_markdown(tracked: list[TrackedRow], *, generated_at: str) -> str:
     else:
         lines.append("- 확정된 추천이 아직 없다(모두 5거래일 미경과).")
     lines.append("")
+
+    if target_outcomes:
+        lines += _calibration_lines(target_outcomes)
 
     by_date: dict[date, list[TrackedRow]] = {}
     for row in tracked:
@@ -201,7 +289,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     generated_at = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
-    document = render_markdown(tracked, generated_at=generated_at)
+    target_outcomes = score_targets(args.db)
+    document = render_markdown(
+        tracked, generated_at=generated_at, target_outcomes=target_outcomes
+    )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(document, encoding="utf-8")
     settled = sum(1 for t in tracked if t.returns[5] is not None)

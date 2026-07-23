@@ -20,6 +20,7 @@ def test_initialize_database_creates_required_tables(tmp_path) -> None:
         "market_context",
         "order_events",
         "orders",
+        "price_targets",
         "prices",
         "recommendations",
         "runs",
