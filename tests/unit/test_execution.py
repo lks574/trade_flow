@@ -241,3 +241,66 @@ def test_run_terminal_state_records_notification_failure(tmp_path) -> None:
             "SELECT status, notification_status, exit_code FROM runs WHERE run_id = 'run-1'"
         ).fetchone()
     assert row == ("completed", "failed", 2)
+
+
+def _band_account() -> AccountSnapshot:
+    return AccountSnapshot(
+        account_hash="account-hash",
+        captured_at=datetime(2026, 1, 2, tzinfo=UTC),
+        nav=Decimal("10000"),
+        cash=Decimal("0"),
+        positions=MappingProxyType(
+            {
+                "HOLD": PositionSnapshot("HOLD", 50, Decimal("100"), Decimal("100")),
+                "RED": PositionSnapshot("RED", 50, Decimal("100"), Decimal("100")),
+            }
+        ),
+    )
+
+
+def _band_quotes() -> dict[str, Quote]:
+    captured = datetime(2026, 1, 2, tzinfo=UTC)
+    return {
+        "HOLD": Quote("HOLD", Decimal("100"), Decimal("100"), captured),
+        "RED": Quote("RED", Decimal("100"), Decimal("100"), captured),
+    }
+
+
+def test_planner_rebalance_band_suppresses_small_drift_except_risk_reduced() -> None:
+    from dataclasses import replace
+
+    config = load_config("configs/strategy.toml")
+    exec_cfg = replace(config.execution, rebalance_band=Decimal("0.05"))
+    # 두 종목 모두 현재 비중 0.5, 목표 0.48(드리프트 0.02 < band 0.05).
+    plan = plan_orders(
+        _band_account(),
+        {"HOLD": Decimal("0.48"), "RED": Decimal("0.48")},
+        _band_quotes(),
+        trading_date=date(2026, 1, 2),
+        strategy_version=config.strategy_version,
+        cash_buffer_fraction=Decimal("0"),
+        config=exec_cfg,
+        risk_reduced_symbols=frozenset({"RED"}),
+    )
+    sold = {intent.symbol for intent in plan.intents if intent.side == "sell"}
+    # HOLD: 일반 드리프트 -> band로 억제. RED: 리스크 축소 -> 억제 예외로 체결.
+    assert "HOLD" not in sold
+    assert plan.drift.get("HOLD") == "within_rebalance_band"
+    assert "RED" in sold
+
+
+def test_planner_rebalance_band_zero_is_noop() -> None:
+    config = load_config("configs/strategy.toml")  # rebalance_band=0
+    plan = plan_orders(
+        _band_account(),
+        {"HOLD": Decimal("0.48"), "RED": Decimal("0.48")},
+        _band_quotes(),
+        trading_date=date(2026, 1, 2),
+        strategy_version=config.strategy_version,
+        cash_buffer_fraction=Decimal("0"),
+        config=config.execution,
+    )
+    sold = {intent.symbol for intent in plan.intents if intent.side == "sell"}
+    # band=0이면 작은 드리프트도 그대로 매도(기존 동작).
+    assert "HOLD" in sold
+    assert "within_rebalance_band" not in plan.drift.values()

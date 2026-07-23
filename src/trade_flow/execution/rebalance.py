@@ -28,6 +28,18 @@ from trade_flow.safety import SafetyContext, apply_safety_filters, authorize_exe
 from trade_flow.strategy import StrategyResult
 
 
+def _risk_reduced_symbols(
+    strategy_result: StrategyResult, risk_target: RiskAdjustedTarget
+) -> frozenset[str]:
+    """리스크 정책이 전략 목표보다 낮춘 종목. no-trade band 억제에서 제외해야 한다(§3.5)."""
+    strategy_weights = strategy_result.target_weights
+    return frozenset(
+        symbol
+        for symbol, weight in risk_target.target_weights.items()
+        if weight < strategy_weights.get(symbol, Decimal(0))
+    )
+
+
 class RebalanceBroker(Protocol):
     def account_snapshot(self) -> AccountSnapshot: ...
 
@@ -103,6 +115,7 @@ def execute_rebalance(
         cash_buffer_fraction=config.strategy.cash_buffer_weight,
         config=config.execution,
         rebalance_sequence=0,
+        risk_reduced_symbols=_risk_reduced_symbols(strategy_result, risk_target),
     )
     sell_plan = _side(initial_plan, "sell")
     completed: list[BrokerOrder] = []
@@ -139,6 +152,7 @@ def execute_rebalance(
         cash_buffer_fraction=config.strategy.cash_buffer_weight,
         config=config.execution,
         rebalance_sequence=1,
+        risk_reduced_symbols=_risk_reduced_symbols(strategy_result, risk_target),
     )
     buy_plan = apply_safety_filters(safety_context, _side(refreshed_plan, "buy"))
     if buy_plan.intents:

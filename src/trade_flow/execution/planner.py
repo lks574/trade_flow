@@ -47,6 +47,7 @@ def plan_orders(
     cash_buffer_fraction: Decimal,
     config: ExecutionConfig,
     rebalance_sequence: int = 0,
+    risk_reduced_symbols: frozenset[str] = frozenset(),
 ) -> OrderPlan:
     if any(weight < 0 for weight in target_weights.values()) or sum(
         target_weights.values()
@@ -77,6 +78,22 @@ def plan_orders(
         limits[(symbol, "sell")] = sell_limit
         target_amount = account.nav * target_weights.get(symbol, Decimal(0))
         targets[symbol] = int((target_amount / buy_limit).to_integral_value(rounding=ROUND_FLOOR))
+
+    if config.rebalance_band > 0 and account.nav > 0:
+        # §3.5 no-trade band: 보유 중이고 여전히 선정된 종목의 비중 드리프트가 밴드 이내이고
+        # 리스크 축소 대상이 아니면 재조정 주문을 생략(현재 수량 유지)하고 drift로 기록한다.
+        # 신규 진입(현재 0)·청산/손절(목표 0)·리스크 축소는 밴드와 무관하게 실행한다.
+        for symbol in list(targets):
+            if symbol in risk_reduced_symbols:
+                continue
+            current = account.positions.get(symbol)
+            target_weight = target_weights.get(symbol, Decimal(0))
+            if current is None or current.quantity <= 0 or target_weight <= 0:
+                continue
+            current_weight = Decimal(current.quantity) * current.market_price / account.nav
+            if abs(target_weight - current_weight) <= config.rebalance_band:
+                targets[symbol] = current.quantity
+                drift[symbol] = "within_rebalance_band"
 
     sells: list[OrderIntent] = []
     buy_requests: list[tuple[str, int]] = []

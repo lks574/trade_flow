@@ -1,0 +1,70 @@
+{
+  "symbols": [
+    "A",
+    "AAPL",
+    "ABBV",
+    "ABT",
+    "ACGL",
+    "ACN",
+    "ADBE",
+    "ADI",
+    "ADM",
+    "ADP",
+    "ADSK",
+    "AEE"
+  ],
+  "start": "2016-01-01",
+  "end": "2026-07-21",
+  "cost_bps": 15,
+  "policy": "buy_block",
+  "results": [
+    {
+      "band": "0",
+      "total_return": 0.7981256282770017,
+      "cagr": 0.06587918235407297,
+      "maximum_drawdown": -0.2084968996624297,
+      "sharpe": 0.3793813635158397,
+      "calmar": 0.3159719998749897,
+      "turnover": 480.00165109088067,
+      "sell_win_rate": 0.7371231155778895,
+      "maximum_recovery_sessions": 1475,
+      "trade_count": 11989
+    },
+    {
+      "band": "0.01",
+      "total_return": 0.8359187700455084,
+      "cagr": 0.06829263578872968,
+      "maximum_drawdown": -0.2044028981177303,
+      "sharpe": 0.39376734728608176,
+      "calmar": 0.3341079623508814,
+      "turnover": 468.03003752899014,
+      "sell_win_rate": 0.5355048859934853,
+      "maximum_recovery_sessions": 1475,
+      "trade_count": 2945
+    },
+    {
+      "band": "0.02",
+      "total_return": 0.83466821932857,
+      "cagr": 0.06821348755091128,
+      "maximum_drawdown": -0.20665605084333316,
+      "sharpe": 0.3927110576714966,
+      "calmar": 0.3300822176391255,
+      "turnover": 467.2707410628198,
+      "sell_win_rate": 0.49321912919343325,
+      "maximum_recovery_sessions": 1475,
+      "trade_count": 2763
+    },
+    {
+      "band": "0.03",
+      "total_return": 0.8906208879093243,
+      "cagr": 0.07170860973657223,
+      "maximum_drawdown": -0.2091049086974789,
+      "sharpe": 0.3931107673517302,
+      "calmar": 0.3429312596401846,
+      "turnover": 466.28914231591193,
+      "sell_win_rate": 0.48099415204678364,
+      "maximum_recovery_sessions": 1475,
+      "trade_count": 2724
+    }
+  ]
+}

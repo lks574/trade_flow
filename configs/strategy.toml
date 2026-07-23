@@ -19,6 +19,9 @@ high_volatility_max_symbols = 2
 cash_buffer_weight = 0.02
 minimum_price_days = 201
 maximum_recent_missing_days = 0
+# 선정 유지 버퍼(hysteresis, §3.3). 0=비활성(단순 상위 N). >0이면 보유 종목을
+# 상위 (main_count+값) 이내 유지. 최적값은 grade-B 후 확정(현재 비활성).
+selection_hysteresis = 0
 
 [strategy.factor_weights]
 momentum = 0.40
@@ -56,3 +59,6 @@ limit_offset_fraction = 0.003
 default_tick_size = 0.01
 order_timeout_seconds = 600
 estimated_fee_bps = 15
+# 재조정 밴드(no-trade band, §3.5). 0=비활성. >0이면 보유·선정 유지 종목의 비중
+# 드리프트가 이 값 이내면 재조정 주문 생략(리스크 축소는 예외). 값은 grade-B 후 확정.
+rebalance_band = 0

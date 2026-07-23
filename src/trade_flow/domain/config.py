@@ -71,8 +71,13 @@ class StrategyConfig:
     minimum_price_days: int
     maximum_recent_missing_days: int
     factor_weights: FactorWeights
+    # 선정 유지 버퍼(hysteresis). 0이면 단순 상위 N 선정(기존 동작). >0이면 보유 종목을
+    # 상위 (main_count + 값) 이내인 동안 유지해 선정 로테이션을 줄인다(§3.3).
+    selection_hysteresis: int = 0
 
     def __post_init__(self) -> None:
+        if self.selection_hysteresis < 0:
+            raise ConfigError("selection_hysteresis must be non-negative")
         if not 3 <= self.main_count <= 5:
             raise ConfigError("main_count must be between 3 and 5")
         positive_periods = (
@@ -192,6 +197,9 @@ class ExecutionConfig:
     default_tick_size: Decimal
     order_timeout_seconds: int
     estimated_fee_bps: int
+    # 재조정 밴드(no-trade band). 0이면 비활성(기존 동작). >0이면 보유·선정 유지 종목의
+    # 비중 드리프트가 이 값 이내일 때 재조정 주문을 생성하지 않는다(§3.5). 리스크 축소는 예외.
+    rebalance_band: Decimal = Decimal(0)
 
     def __post_init__(self) -> None:
         if not Decimal(0) < self.limit_offset_fraction < Decimal(1):
@@ -200,6 +208,8 @@ class ExecutionConfig:
             raise ConfigError("execution tick size and timeout must be positive")
         if self.estimated_fee_bps < 0:
             raise ConfigError("execution estimated fee cannot be negative")
+        if self.rebalance_band < 0:
+            raise ConfigError("execution rebalance_band cannot be negative")
 
 
 @dataclass(frozen=True)
@@ -298,6 +308,11 @@ def load_config(path: str | Path) -> AppConfig:
             strategy_raw.get("maximum_recent_missing_days"),
             "strategy.maximum_recent_missing_days",
         ),
+        selection_hysteresis=(
+            _integer(strategy_raw.get("selection_hysteresis"), "strategy.selection_hysteresis")
+            if strategy_raw.get("selection_hysteresis") is not None
+            else 0
+        ),
         factor_weights=factor_weights,
     )
     risk = RiskConfig(
@@ -381,6 +396,11 @@ def load_config(path: str | Path) -> AppConfig:
         ),
         estimated_fee_bps=_integer(
             execution_raw.get("estimated_fee_bps"), "execution.estimated_fee_bps"
+        ),
+        rebalance_band=(
+            _decimal(execution_raw.get("rebalance_band"), "execution.rebalance_band")
+            if execution_raw.get("rebalance_band") is not None
+            else Decimal(0)
         ),
     )
     strategy_version = raw.get("strategy_version")

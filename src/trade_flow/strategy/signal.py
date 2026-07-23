@@ -183,6 +183,7 @@ def signal(
     *,
     main_symbols: Iterable[str],
     high_volatility_symbols: Iterable[str] = (),
+    held_symbols: frozenset[str] = frozenset(),
 ) -> StrategyResult:
     snapshot.quality_report.require_valid()
     grouped = _bars_by_symbol(snapshot)
@@ -209,4 +210,6 @@ def signal(
         main_set=main_set,
         high_volatility_set=high_volatility_set,
         as_of=snapshot.as_of,
+        held_symbols=held_symbols,
+        selection_hysteresis=config.selection_hysteresis,
     )

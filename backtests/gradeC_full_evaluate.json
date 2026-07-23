@@ -1,0 +1,547 @@
+{
+  "benchmarks": [
+    {
+      "metrics": {
+        "cagr": 0.0,
+        "calmar": 0.0,
+        "maximum_drawdown": 0.0,
+        "maximum_recovery_sessions": 1,
+        "sell_win_rate": 0.0,
+        "sharpe": 0.0,
+        "total_return": 0.0,
+        "trade_count": 0,
+        "turnover": 0.0
+      },
+      "name": "cash",
+      "transaction_cost_bps": 0
+    }
+  ],
+  "config_hash": "a88d23fb7e9446e0c792efa9f422f61a9019481f9cd5354f66d404a45bb1f81f",
+  "data_hash": "d2d938915bf001340eca747bf41e232835eb87ebe670aa7510d643c6a7ab1e11",
+  "period_scenarios": [
+    {
+      "end": "2026-07-21",
+      "metrics": {
+        "cagr": 0.526160595570693,
+        "calmar": 2.382266068998423,
+        "maximum_drawdown": -0.22086558777706422,
+        "maximum_recovery_sessions": 140,
+        "sell_win_rate": 0.6823222439660795,
+        "sharpe": 1.497648113679984,
+        "total_return": 1.3251661508967156,
+        "trade_count": 2927,
+        "turnover": 232.61704824797297
+      },
+      "period": "holdout",
+      "regime_policy": "buy_block",
+      "start": "2024-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2022-07-20",
+      "metrics": {
+        "cagr": -0.26141436971768806,
+        "calmar": -0.6859508299964046,
+        "maximum_drawdown": -0.38109782550894833,
+        "maximum_recovery_sessions": 238,
+        "sell_win_rate": 0.6122448979591837,
+        "sharpe": -1.3756780820713883,
+        "total_return": -0.2606526265562026,
+        "trade_count": 1382,
+        "turnover": 136.1680089621646
+      },
+      "period": "walk_forward_1",
+      "regime_policy": "buy_block",
+      "start": "2021-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2023-07-20",
+      "metrics": {
+        "cagr": 0.2303598480092377,
+        "calmar": 1.0634042222174642,
+        "maximum_drawdown": -0.21662491383462792,
+        "maximum_recovery_sessions": 102,
+        "sell_win_rate": 0.631979695431472,
+        "sharpe": 0.9461783981370153,
+        "total_return": 0.22949247197073291,
+        "trade_count": 1514,
+        "turnover": 124.87415307408904
+      },
+      "period": "walk_forward_2",
+      "regime_policy": "buy_block",
+      "start": "2022-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2024-07-19",
+      "metrics": {
+        "cagr": 1.7381775399656427,
+        "calmar": 8.165215228933679,
+        "maximum_drawdown": -0.21287589992807043,
+        "maximum_recovery_sessions": 134,
+        "sell_win_rate": 0.6391875746714456,
+        "sharpe": 1.0358922937795028,
+        "total_return": 1.728810800356904,
+        "trade_count": 1613,
+        "turnover": 137.9194640581332
+      },
+      "period": "walk_forward_3",
+      "regime_policy": "buy_block",
+      "start": "2023-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2026-07-21",
+      "metrics": {
+        "cagr": 0.5351507446585866,
+        "calmar": 2.4914529426948473,
+        "maximum_drawdown": -0.21479464271147253,
+        "maximum_recovery_sessions": 140,
+        "sell_win_rate": 0.6805736636245111,
+        "sharpe": 1.5198193008903782,
+        "total_return": 1.3525843511526636,
+        "trade_count": 2927,
+        "turnover": 233.53146820641368
+      },
+      "period": "holdout",
+      "regime_policy": "equity_cap",
+      "start": "2024-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2022-07-20",
+      "metrics": {
+        "cagr": -0.26975667481049936,
+        "calmar": -0.6951339908400621,
+        "maximum_drawdown": -0.3880642845338368,
+        "maximum_recovery_sessions": 238,
+        "sell_win_rate": 0.6081081081081081,
+        "sharpe": -1.4421790587055336,
+        "total_return": -0.26897528748121724,
+        "trade_count": 1382,
+        "turnover": 136.46758893464522
+      },
+      "period": "walk_forward_1",
+      "regime_policy": "equity_cap",
+      "start": "2021-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2023-07-20",
+      "metrics": {
+        "cagr": 0.22014277018048123,
+        "calmar": 1.0162429063447695,
+        "maximum_drawdown": -0.21662416416985628,
+        "maximum_recovery_sessions": 102,
+        "sell_win_rate": 0.631979695431472,
+        "sharpe": 0.9164041638929119,
+        "total_return": 0.21931718528815847,
+        "trade_count": 1514,
+        "turnover": 124.84351471533564
+      },
+      "period": "walk_forward_2",
+      "regime_policy": "equity_cap",
+      "start": "2022-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2024-07-19",
+      "metrics": {
+        "cagr": 1.73817582912155,
+        "calmar": 8.16521667652862,
+        "maximum_drawdown": -0.2128756526594126,
+        "maximum_recovery_sessions": 134,
+        "sell_win_rate": 0.6391875746714456,
+        "sharpe": 1.035891839670308,
+        "total_return": 1.7288091011653786,
+        "trade_count": 1613,
+        "turnover": 137.91954975352826
+      },
+      "period": "walk_forward_3",
+      "regime_policy": "equity_cap",
+      "start": "2023-07-21",
+      "transaction_cost_bps": 5
+    },
+    {
+      "end": "2026-07-21",
+      "metrics": {
+        "cagr": 0.36962832384676947,
+        "calmar": 1.5326341135286212,
+        "maximum_drawdown": -0.24117192784895353,
+        "maximum_recovery_sessions": 154,
+        "sell_win_rate": 0.6718346253229974,
+        "sharpe": 1.1570567281585542,
+        "total_return": 0.873484304099695,
+        "trade_count": 2917,
+        "turnover": 231.915369037511
+      },
+      "period": "holdout",
+      "regime_policy": "buy_block",
+      "start": "2024-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2022-07-20",
+      "metrics": {
+        "cagr": -0.3528297752623357,
+        "calmar": -0.7903967441634553,
+        "maximum_drawdown": -0.4463957852404437,
+        "maximum_recovery_sessions": 238,
+        "sell_win_rate": 0.6008064516129032,
+        "sharpe": -2.014556454134987,
+        "total_return": -0.3518710591685351,
+        "trade_count": 1375,
+        "turnover": 136.18789067830497
+      },
+      "period": "walk_forward_1",
+      "regime_policy": "buy_block",
+      "start": "2021-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2023-07-20",
+      "metrics": {
+        "cagr": 0.08783803731982154,
+        "calmar": 0.3286681317889712,
+        "maximum_drawdown": -0.26725450028182207,
+        "maximum_recovery_sessions": 212,
+        "sell_win_rate": 0.6204744069912609,
+        "sharpe": 0.4586922639171243,
+        "total_return": 0.08752651484650316,
+        "trade_count": 1511,
+        "turnover": 124.16607385720869
+      },
+      "period": "walk_forward_2",
+      "regime_policy": "buy_block",
+      "start": "2022-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2024-07-19",
+      "metrics": {
+        "cagr": 1.382574018747484,
+        "calmar": 5.647740296838741,
+        "maximum_drawdown": -0.24480127379818867,
+        "maximum_recovery_sessions": 137,
+        "sell_win_rate": 0.6247030878859857,
+        "sharpe": 0.9519114759383928,
+        "total_return": 1.3755476520447008,
+        "trade_count": 1612,
+        "turnover": 138.025067191081
+      },
+      "period": "walk_forward_3",
+      "regime_policy": "buy_block",
+      "start": "2023-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2026-07-21",
+      "metrics": {
+        "cagr": 0.37698957206547745,
+        "calmar": 1.6024391959090587,
+        "maximum_drawdown": -0.23525982953232272,
+        "maximum_recovery_sessions": 148,
+        "sell_win_rate": 0.670755326016785,
+        "sharpe": 1.1766007956319917,
+        "total_return": 0.8936357305793742,
+        "trade_count": 2916,
+        "turnover": 232.82262420088915
+      },
+      "period": "holdout",
+      "regime_policy": "equity_cap",
+      "start": "2024-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2022-07-20",
+      "metrics": {
+        "cagr": -0.36033376518928806,
+        "calmar": -0.7958048777187264,
+        "maximum_drawdown": -0.45279160165771987,
+        "maximum_recovery_sessions": 238,
+        "sell_win_rate": 0.5962566844919787,
+        "sharpe": -2.087229814243789,
+        "total_return": -0.3593607485116671,
+        "trade_count": 1375,
+        "turnover": 136.48380369198102
+      },
+      "period": "walk_forward_1",
+      "regime_policy": "equity_cap",
+      "start": "2021-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2023-07-20",
+      "metrics": {
+        "cagr": 0.07880283642646013,
+        "calmar": 0.2883175542979486,
+        "maximum_drawdown": -0.27331959241380405,
+        "maximum_recovery_sessions": 212,
+        "sell_win_rate": 0.6204744069912609,
+        "sharpe": 0.4265649839596603,
+        "total_return": 0.07852450141381603,
+        "trade_count": 1511,
+        "turnover": 124.13321215843978
+      },
+      "period": "walk_forward_2",
+      "regime_policy": "equity_cap",
+      "start": "2022-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2024-07-19",
+      "metrics": {
+        "cagr": 1.382562864838183,
+        "calmar": 5.647710182243754,
+        "maximum_drawdown": -0.24480060417847266,
+        "maximum_recovery_sessions": 137,
+        "sell_win_rate": 0.6247030878859857,
+        "sharpe": 0.9519088022682094,
+        "total_return": 1.3755365688609413,
+        "trade_count": 1612,
+        "turnover": 138.02507140527172
+      },
+      "period": "walk_forward_3",
+      "regime_policy": "equity_cap",
+      "start": "2023-07-21",
+      "transaction_cost_bps": 15
+    },
+    {
+      "end": "2026-07-21",
+      "metrics": {
+        "cagr": 0.14822083869622338,
+        "calmar": 0.5150478909325548,
+        "maximum_drawdown": -0.28778069244755494,
+        "maximum_recovery_sessions": 228,
+        "sell_win_rate": 0.6592214422463306,
+        "sharpe": 0.5974606674382227,
+        "total_return": 0.3176704241599107,
+        "trade_count": 2915,
+        "turnover": 232.82685359389143
+      },
+      "period": "holdout",
+      "regime_policy": "buy_block",
+      "start": "2024-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2022-07-20",
+      "metrics": {
+        "cagr": -0.4687281605214537,
+        "calmar": -0.8823619175356655,
+        "maximum_drawdown": -0.5312198443814949,
+        "maximum_recovery_sessions": 238,
+        "sell_win_rate": 0.5699067909454061,
+        "sharpe": -2.958209078133076,
+        "total_return": -0.4675838418641351,
+        "trade_count": 1371,
+        "turnover": 136.9377699144085
+      },
+      "period": "walk_forward_1",
+      "regime_policy": "buy_block",
+      "start": "2021-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2023-07-20",
+      "metrics": {
+        "cagr": -0.09981533818003685,
+        "calmar": -0.27606438143971174,
+        "maximum_drawdown": -0.36156543506078853,
+        "maximum_recovery_sessions": 214,
+        "sell_win_rate": 0.6004901960784313,
+        "sharpe": -0.28820921811298955,
+        "total_return": -0.09949326409481321,
+        "trade_count": 1511,
+        "turnover": 123.58971817675362
+      },
+      "period": "walk_forward_2",
+      "regime_policy": "buy_block",
+      "start": "2022-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2024-07-19",
+      "metrics": {
+        "cagr": 0.9330986531849037,
+        "calmar": 3.2135189519357445,
+        "maximum_drawdown": -0.29036662522958767,
+        "maximum_recovery_sessions": 216,
+        "sell_win_rate": 0.6025641025641025,
+        "sharpe": 0.8254403839489941,
+        "total_return": 0.9287690351519265,
+        "trade_count": 1612,
+        "turnover": 138.20766159048446
+      },
+      "period": "walk_forward_3",
+      "regime_policy": "buy_block",
+      "start": "2023-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2026-07-21",
+      "metrics": {
+        "cagr": 0.1535012026033531,
+        "calmar": 0.544388692961406,
+        "maximum_drawdown": -0.28196985827961607,
+        "maximum_recovery_sessions": 227,
+        "sell_win_rate": 0.6583969465648855,
+        "sharpe": 0.6128817160151123,
+        "total_return": 0.32979271915752784,
+        "trade_count": 2918,
+        "turnover": 233.7326862367978
+      },
+      "period": "holdout",
+      "regime_policy": "equity_cap",
+      "start": "2024-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2022-07-20",
+      "metrics": {
+        "cagr": -0.475122749235688,
+        "calmar": -0.8850297207215461,
+        "maximum_drawdown": -0.5368438348582582,
+        "maximum_recovery_sessions": 238,
+        "sell_win_rate": 0.5668874172185431,
+        "sharpe": -3.040295688432873,
+        "total_return": -0.47397053502848696,
+        "trade_count": 1371,
+        "turnover": 137.2267878923883
+      },
+      "period": "walk_forward_1",
+      "regime_policy": "equity_cap",
+      "start": "2021-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2023-07-20",
+      "metrics": {
+        "cagr": -0.10725835308087817,
+        "calmar": -0.2923935654429079,
+        "maximum_drawdown": -0.3668287054074081,
+        "maximum_recovery_sessions": 214,
+        "sell_win_rate": 0.6,
+        "sharpe": -0.3237897423558369,
+        "total_return": -0.1069137175799483,
+        "trade_count": 1509,
+        "turnover": 123.55610841331603
+      },
+      "period": "walk_forward_2",
+      "regime_policy": "equity_cap",
+      "start": "2022-07-21",
+      "transaction_cost_bps": 30
+    },
+    {
+      "end": "2024-07-19",
+      "metrics": {
+        "cagr": 0.9331068749356839,
+        "calmar": 3.2135481756429174,
+        "maximum_drawdown": -0.29036654312767607,
+        "maximum_recovery_sessions": 216,
+        "sell_win_rate": 0.6025641025641025,
+        "sharpe": 0.825443205346064,
+        "total_return": 0.928777210581635,
+        "trade_count": 1611,
+        "turnover": 138.20874758868553
+      },
+      "period": "walk_forward_3",
+      "regime_policy": "equity_cap",
+      "start": "2023-07-21",
+      "transaction_cost_bps": 30
+    }
+  ],
+  "scenarios": [
+    {
+      "metrics": {
+        "cagr": 0.33002868478777936,
+        "calmar": 0.7625442970743463,
+        "maximum_drawdown": -0.4327993613669401,
+        "maximum_recovery_sessions": 713,
+        "sell_win_rate": 0.6632182301132392,
+        "sharpe": 0.6409836428048937,
+        "total_return": 12.786147870994947,
+        "trade_count": 13538,
+        "turnover": 1112.9357843317846
+      },
+      "regime_policy": "buy_block",
+      "transaction_cost_bps": 5
+    },
+    {
+      "metrics": {
+        "cagr": 0.32789213185786337,
+        "calmar": 0.7387859014933913,
+        "maximum_drawdown": -0.44382564853370643,
+        "maximum_recovery_sessions": 713,
+        "sell_win_rate": 0.6614568797097404,
+        "sharpe": 0.6384439311424326,
+        "total_return": 12.583755087475588,
+        "trade_count": 13537,
+        "turnover": 1116.087253518191
+      },
+      "regime_policy": "equity_cap",
+      "transaction_cost_bps": 5
+    },
+    {
+      "metrics": {
+        "cagr": 0.17751298966009954,
+        "calmar": 0.3227706749810167,
+        "maximum_drawdown": -0.5499662869637699,
+        "maximum_recovery_sessions": 813,
+        "sell_win_rate": 0.6494475138121547,
+        "sharpe": 0.44926400598143523,
+        "total_return": 3.496137860504826,
+        "trade_count": 13512,
+        "turnover": 1121.3779048483964
+      },
+      "regime_policy": "buy_block",
+      "transaction_cost_bps": 15
+    },
+    {
+      "metrics": {
+        "cagr": 0.17534276006369054,
+        "calmar": 0.31375741193317247,
+        "maximum_drawdown": -0.5588481846001362,
+        "maximum_recovery_sessions": 813,
+        "sell_win_rate": 0.6479591836734694,
+        "sharpe": 0.44621368879005197,
+        "total_return": 3.420479283249433,
+        "trade_count": 13510,
+        "turnover": 1124.2529885239958
+      },
+      "regime_policy": "equity_cap",
+      "transaction_cost_bps": 15
+    },
+    {
+      "metrics": {
+        "cagr": -0.022129728700701845,
+        "calmar": -0.028104079741451994,
+        "maximum_drawdown": -0.7874205063566516,
+        "maximum_recovery_sessions": 2290,
+        "sell_win_rate": 0.624813153961136,
+        "sharpe": 0.1564600849427042,
+        "total_return": -0.18605776654297446,
+        "trade_count": 13498,
+        "turnover": 1142.0851823530577
+      },
+      "regime_policy": "buy_block",
+      "transaction_cost_bps": 30
+    },
+    {
+      "metrics": {
+        "cagr": -0.02427197936658787,
+        "calmar": -0.030585950805887375,
+        "maximum_drawdown": -0.7935662854043383,
+        "maximum_recovery_sessions": 2290,
+        "sell_win_rate": 0.6235086767895879,
+        "sharpe": 0.15265250914397538,
+        "total_return": -0.20231486615085753,
+        "trade_count": 13498,
+        "turnover": 1144.467053362194
+      },
+      "regime_policy": "equity_cap",
+      "transaction_cost_bps": 30
+    }
+  ]
+}

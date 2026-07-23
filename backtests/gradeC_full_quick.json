@@ -1,0 +1,11 @@
+{
+  "total_return": 3.6221729401351093,
+  "cagr": 0.18111551438117957,
+  "maximum_drawdown": -0.5350324067414183,
+  "sharpe": 0.4538780273734025,
+  "calmar": 0.3385131668645127,
+  "turnover": 1124.3797070760497,
+  "sell_win_rate": 0.6481967666160011,
+  "maximum_recovery_sessions": 813,
+  "trade_count": 13522
+}
