@@ -92,6 +92,20 @@ class StrategyConfig:
             raise ConfigError("sma_short_days must be less than sma_long_days")
         if self.macd_fast_days >= self.macd_slow_days:
             raise ConfigError("macd_fast_days must be less than macd_slow_days")
+        # 사전계산 팩터의 슬라이스 재계산 동치는 minimum_price_days가 모든 지표 최소
+        # 이력 이상일 때만 보장된다(적격 시점에 SMA/모멘텀/MACD/RSI/유동성이 모두 계산 가능).
+        required_history = max(
+            self.sma_long_days,
+            self.momentum_days + 1,
+            self.macd_slow_days + self.macd_signal_days,
+            self.rsi_days + 1,
+            self.tie_break_liquidity_days,
+        )
+        if self.minimum_price_days < required_history:
+            raise ConfigError(
+                f"minimum_price_days({self.minimum_price_days}) must be >= "
+                f"max indicator history({required_history})"
+            )
         if self.maximum_recent_missing_days != 0:
             raise ConfigError("recent price data cannot contain missing sessions")
         allocation = (

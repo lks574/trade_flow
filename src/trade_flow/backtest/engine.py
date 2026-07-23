@@ -66,6 +66,7 @@ def _execute_targets(
     positions: dict[str, Position],
     cost_rate: Decimal,
     rebalance_band: Decimal = Decimal(0),
+    risk_reduced_symbols: frozenset[str] = frozenset(),
 ) -> tuple[Decimal, list[SimulatedTrade]]:
     nav = cash + sum(
         Decimal(position.quantity) * open_prices.get(symbol, position.average_cost)
@@ -85,7 +86,11 @@ def _execute_targets(
         # 리서치 토글: 보유 중이고 여전히 선정된 종목의 비중 드리프트가 밴드 이내이면
         # 재조정을 생략(현재 수량 유지)한다. 신규 진입(현재 0)과 청산·손절(목표 0)은
         # 항상 실행한다. band=0(기본)이면 기존 동작과 동일하다.
+        # 우선순위: §3.4 리스크 정책이 축소한 목표(risk_reduced_symbols)는 band보다 우선하므로
+        # 밴드 억제에서 제외해 반드시 체결한다(상한·레짐·일손실 축소가 band에 먹히지 않도록).
         for symbol in list(desired):
+            if symbol in risk_reduced_symbols:
+                continue
             current_quantity = positions.get(symbol, Position(0, Decimal(0))).quantity
             target_weight = target_weights.get(symbol, Decimal(0))
             if current_quantity <= 0 or target_weight <= 0:
@@ -172,6 +177,8 @@ def run_backtest(
     snapshot.quality_report.require_valid()
     if initial_cash <= 0 or transaction_cost_bps < 0:
         raise ValueError("initial cash must be positive and transaction cost cannot be negative")
+    if rebalance_band < 0 or selection_hysteresis < 0:
+        raise ValueError("rebalance_band and selection_hysteresis must be non-negative")
     bars_by_date: dict[date, dict[str, DailyBar]] = defaultdict(dict)
     for bar in snapshot.prices:
         bars_by_date[bar.session_date][bar.symbol] = bar
@@ -189,7 +196,7 @@ def run_backtest(
     seen_count: dict[str, int] = defaultdict(int)
     positions: dict[str, Position] = {}
     cash = initial_cash
-    pending: tuple[date, Mapping[str, Decimal]] | None = None
+    pending: tuple[date, Mapping[str, Decimal], frozenset[str]] | None = None
     trades: list[SimulatedTrade] = []
     curve: list[EquityPoint] = []
     previous_nav = initial_cash
@@ -203,7 +210,7 @@ def run_backtest(
                 cash += Decimal(position.quantity) * bar.cash_dividend
 
         if pending is not None:
-            signal_date, target_weights = pending
+            signal_date, target_weights, risk_reduced_symbols = pending
             open_prices = {symbol: bar.split_adjusted_open for symbol, bar in today.items()}
             cash, executed = _execute_targets(
                 signal_date=signal_date,
@@ -214,6 +221,7 @@ def run_backtest(
                 positions=positions,
                 cost_rate=cost_rate,
                 rebalance_band=rebalance_band,
+                risk_reduced_symbols=risk_reduced_symbols,
             )
             trades.extend(executed)
             pending = None
@@ -299,7 +307,19 @@ def run_backtest(
             daily_return=daily_return,
         )
         target_weights = dict(risk_target.target_weights)
-        pending = (session_date, MappingProxyType(dict(sorted(target_weights.items()))))
+        # 리스크 정책이 전략 목표보다 낮춘 종목(상한·레짐·일손실 축소, 손절 등)은
+        # no-trade band보다 우선해야 하므로 별도로 표시해 밴드 억제에서 제외한다.
+        strategy_weights = strategy_result.target_weights
+        risk_reduced = frozenset(
+            symbol
+            for symbol, weight in target_weights.items()
+            if weight < strategy_weights.get(symbol, Decimal(0))
+        )
+        pending = (
+            session_date,
+            MappingProxyType(dict(sorted(target_weights.items()))),
+            risk_reduced,
+        )
         previous_nav = nav
 
     return BacktestResult(

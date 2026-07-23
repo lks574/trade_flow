@@ -165,3 +165,54 @@ def test_backtest_uses_point_in_time_universe_membership() -> None:
 
     assert result.trades[0].symbol == "B"
     assert result.trades[0].execution_date == sessions[-1]
+
+
+def test_rebalance_band_does_not_suppress_risk_reduced_targets() -> None:
+    # band 억제는 일반 재조정에만 적용되고, 리스크 정책이 축소한 목표(risk_reduced_symbols)는
+    # 밴드 이내여도 반드시 체결되어야 한다(§3.4 리스크 축소 > no-trade band).
+    from trade_flow.backtest.engine import Position, _execute_targets
+
+    positions = {
+        "A": Position(100, Decimal("100")),
+        "B": Position(100, Decimal("100")),
+    }
+    open_prices = {"A": Decimal("100"), "B": Decimal("100")}
+    # nav=20000, 현재 비중 A=B=0.5. 목표 0.48(드리프트 0.02 < band 0.03).
+    target_weights = {"A": Decimal("0.48"), "B": Decimal("0.48")}
+
+    cash, trades = _execute_targets(
+        signal_date=date(2025, 1, 1),
+        execution_date=date(2025, 1, 2),
+        target_weights=target_weights,
+        open_prices=open_prices,
+        cash=Decimal("0"),
+        positions=positions,
+        cost_rate=Decimal("0"),
+        rebalance_band=Decimal("0.03"),
+        risk_reduced_symbols=frozenset({"A"}),
+    )
+    sold = {t.symbol for t in trades if t.side == "sell"}
+    # A는 리스크 축소 → 억제 제외 → 매도 체결. B는 일반 드리프트 → band로 억제.
+    assert "A" in sold
+    assert "B" not in sold
+
+
+def test_rebalance_band_suppresses_when_not_risk_reduced() -> None:
+    # 대조군: 동일 조건에서 risk_reduced가 비어 있으면 둘 다 band로 억제된다.
+    from trade_flow.backtest.engine import Position, _execute_targets
+
+    positions = {"A": Position(100, Decimal("100")), "B": Position(100, Decimal("100"))}
+    open_prices = {"A": Decimal("100"), "B": Decimal("100")}
+    target_weights = {"A": Decimal("0.48"), "B": Decimal("0.48")}
+    cash, trades = _execute_targets(
+        signal_date=date(2025, 1, 1),
+        execution_date=date(2025, 1, 2),
+        target_weights=target_weights,
+        open_prices=open_prices,
+        cash=Decimal("0"),
+        positions=positions,
+        cost_rate=Decimal("0"),
+        rebalance_band=Decimal("0.03"),
+        risk_reduced_symbols=frozenset(),
+    )
+    assert trades == []
