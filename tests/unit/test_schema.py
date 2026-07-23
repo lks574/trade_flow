@@ -21,6 +21,7 @@ def test_initialize_database_creates_required_tables(tmp_path) -> None:
         "order_events",
         "orders",
         "prices",
+        "recommendations",
         "runs",
         "sentiment",
         "snapshots",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS prices (
@@ -98,6 +98,18 @@ CREATE TABLE IF NOT EXISTS snapshots (
     positions_json TEXT NOT NULL,
     source TEXT NOT NULL,
     PRIMARY KEY (run_id, captured_at, source)
+);
+
+-- 추천 리포트 영속화(사후 추적용). as_of_date는 신호 기준일(데이터 최종 세션).
+CREATE TABLE IF NOT EXISTS recommendations (
+    as_of_date TEXT NOT NULL,
+    rank INTEGER NOT NULL CHECK (rank > 0),
+    symbol TEXT NOT NULL,
+    total_score TEXT NOT NULL,
+    momentum_return TEXT NOT NULL,
+    traded INTEGER NOT NULL CHECK (traded IN (0, 1)),
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (as_of_date, symbol)
 );
 """
 

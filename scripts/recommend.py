@@ -25,6 +25,11 @@ from trade_flow.data.sqlite_provider import (  # noqa: E402
     SqliteMarketCalendar,
     SqliteMarketDataProvider,
 )
+from trade_flow.db import (  # noqa: E402
+    RecommendationEntry,
+    RecommendationRepository,
+    initialize_database,
+)
 from trade_flow.domain.config import load_config  # noqa: E402
 from trade_flow.operations import Notification, TelegramNotifier  # noqa: E402
 from trade_flow.strategy import signal  # noqa: E402
@@ -48,6 +53,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="리포트를 텔레그램으로 발송(.env의 TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID 필요).",
     )
+    parser.add_argument(
+        "--as-of",
+        default=None,
+        help="기준일 지정(YYYY-MM-DD, 과거 백필용). 생략 시 DB 최신 세션.",
+    )
+    parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="추천 결과를 recommendations 테이블에 저장하지 않음(실험 실행용).",
+    )
     args = parser.parse_args(argv)
 
     telegram = None
@@ -65,9 +80,19 @@ def main(argv: list[str] | None = None) -> int:
     provider = SqliteMarketDataProvider(args.db)
     calendar = SqliteMarketCalendar(args.db)
     connection = sqlite3.connect(args.db)
-    raw_end = date.fromisoformat(
-        connection.execute("SELECT MAX(session_date) FROM prices").fetchone()[0]
-    )
+    if args.as_of:
+        # 백필: 지정일 이하의 마지막 세션을 기준일로 쓴다(휴장일 지정 허용).
+        row = connection.execute(
+            "SELECT MAX(session_date) FROM prices WHERE session_date <= ?", (args.as_of,)
+        ).fetchone()
+        if row[0] is None:
+            print(f"오류: {args.as_of} 이전 가격 데이터가 없다.", file=sys.stderr)
+            return 2
+        raw_end = date.fromisoformat(row[0])
+    else:
+        raw_end = date.fromisoformat(
+            connection.execute("SELECT MAX(session_date) FROM prices").fetchone()[0]
+        )
     start = date.fromisoformat(args.start)
     universe_spec = R.load_universe(args.universe)
     provider_of = {m.symbol: m.provider_symbol for m in universe_spec.symbols}
@@ -106,6 +131,23 @@ def main(argv: list[str] | None = None) -> int:
     print(f"\n★ = 자동매매가 이번 주 담는 상위 {config.strategy.main_count}. 나머지는 후보 순위.")
     print("펀더멘털은 현재 시점 값(리포트 기준일과 무관). 기술적 팩터 랭킹 + 참고용 펀더멘털이며,")
     print("LLM 펀더멘털·감정 계층은 미구현(docs/research 참고). 수치는 1차 자료로 재검증 후 사용.")
+
+    if not args.no_save:
+        initialize_database(args.db)  # recommendations 테이블 보장(멱등)
+        RecommendationRepository(args.db).record(
+            end,
+            [
+                RecommendationEntry(
+                    rank=rank,
+                    symbol=symbol,
+                    total_score=score.total,
+                    momentum_return=score.momentum_return,
+                    traded=symbol in traded,
+                )
+                for rank, (symbol, score) in enumerate(top, start=1)
+            ],
+        )
+        print(f"recommendations 테이블 저장 완료(기준일 {end}, {len(top)}종목).")
 
     if telegram is not None:
         body = _telegram_body(
