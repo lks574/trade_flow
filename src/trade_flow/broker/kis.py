@@ -31,6 +31,10 @@ TR_PRESENT_BALANCE = {"mock": "VTRP6504R", "real": "CTRP6504R"}
 TR_ORDER_BUY = {"mock": "VTTT1002U", "real": "TTTT1002U"}
 TR_ORDER_SELL = {"mock": "VTTT1006U", "real": "TTTT1006U"}
 TR_CANCEL = {"mock": "VTTT1004U", "real": "TTTT1004U"}  # 정규장 정정취소(order-rvsecncl)
+# 주간거래(daytime): 한국 낮 시간대 미국 거래. 정규장과 별개 경로.
+TR_DAYTIME_BUY = {"mock": "VTTS6036U", "real": "TTTS6036U"}
+TR_DAYTIME_SELL = {"mock": "VTTS6037U", "real": "TTTS6037U"}
+TR_DAYTIME_CANCEL = {"mock": "VTTS6038U", "real": "TTTS6038U"}
 TR_NCCS = {"mock": "VTTS3018R", "real": "TTTS3018R"}  # 미체결내역
 TR_CCNL = {"mock": "VTTS3035R", "real": "TTTS3035R"}  # 주문체결내역
 TR_PRICE = "HHDFS00000300"  # 시세는 모의/실전 공통
@@ -266,9 +270,12 @@ class KisClient:
         quantity: int,
         price: str,
         exchange: str = "NASDAQ",
+        session: str = "regular",
     ) -> dict[str, Any]:
-        """해외주식 지정가 주문. side: buy|sell. 응답 output: KRX_FWDG_ORD_ORGNO, ODNO, ORD_TMD."""
-        tr_map = TR_ORDER_BUY if side == "buy" else TR_ORDER_SELL
+        """해외주식 지정가 주문. side: buy|sell, session: regular(정규장)|daytime(주간거래).
+
+        응답 output: KRX_FWDG_ORD_ORGNO, ODNO, ORD_TMD.
+        """
         body = {
             "CANO": self._cred.account,
             "ACNT_PRDT_CD": self._cred.account_product,
@@ -279,12 +286,15 @@ class KisClient:
             "ORD_SVR_DVSN_CD": "0",
             "ORD_DVSN": "00",  # 지정가
         }
-        return self._post(
-            "/uapi/overseas-stock/v1/trading/order",
-            tr_map[self._cred.environment],
-            body,
-            f"order-{side}",
-        )
+        if session == "daytime":
+            body["CTAC_TLNO"] = ""
+            body["MGCO_APTM_ODNO"] = ""
+            tr_map = TR_DAYTIME_BUY if side == "buy" else TR_DAYTIME_SELL
+            path = "/uapi/overseas-stock/v1/trading/daytime-order"
+        else:
+            tr_map = TR_ORDER_BUY if side == "buy" else TR_ORDER_SELL
+            path = "/uapi/overseas-stock/v1/trading/order"
+        return self._post(path, tr_map[self._cred.environment], body, f"order-{side}-{session}")
 
     def cancel_order_raw(
         self,
@@ -293,8 +303,9 @@ class KisClient:
         org_order_no: str,
         quantity: int,
         exchange: str = "NASDAQ",
+        session: str = "regular",
     ) -> dict[str, Any]:
-        """해외주식 정규장 주문 취소(order-rvsecncl, RVSE_CNCL_DVSN_CD=02)."""
+        """해외주식 주문 취소(RVSE_CNCL_DVSN_CD=02). session: regular|daytime."""
         body = {
             "CANO": self._cred.account,
             "ACNT_PRDT_CD": self._cred.account_product,
@@ -307,12 +318,15 @@ class KisClient:
             "ORD_SVR_DVSN_CD": "0",
             "ORD_DVSN": "00",
         }
-        return self._post(
-            "/uapi/overseas-stock/v1/trading/order-rvsecncl",
-            TR_CANCEL[self._cred.environment],
-            body,
-            "cancel",
-        )
+        if session == "daytime":
+            body["CTAC_TLNO"] = ""
+            body["MGCO_APTM_ODNO"] = ""
+            path = "/uapi/overseas-stock/v1/trading/daytime-order-rvsecncl"
+            tr_id = TR_DAYTIME_CANCEL[self._cred.environment]
+        else:
+            path = "/uapi/overseas-stock/v1/trading/order-rvsecncl"
+            tr_id = TR_CANCEL[self._cred.environment]
+        return self._post(path, tr_id, body, "cancel")
 
     def inquire_nccs_raw(self, exchange: str = "NASDAQ") -> dict[str, Any]:
         """해외주식 미체결내역."""

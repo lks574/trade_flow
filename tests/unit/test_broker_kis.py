@@ -22,9 +22,11 @@ class _FakeSession:
         self.post_calls: list[tuple] = []
         self.get_calls: list[tuple] = []
 
-    def post(self, url, json=None, timeout=None):  # noqa: A002 - KIS API 형태
+    def post(self, url, headers=None, json=None, timeout=None):  # noqa: A002 - KIS API 형태
         self.post_calls.append((url, json))
-        return _FakeResponse(self.token_payload)
+        if url.endswith("/oauth2/tokenP"):
+            return _FakeResponse(self.token_payload)
+        return _FakeResponse({"rt_cd": "0", "output": {"ODNO": "1"}})
 
     def get(self, url, headers=None, params=None, timeout=None):
         self.get_calls.append((url, headers, params))
@@ -254,3 +256,17 @@ def test_kis_broker_status_pending_vs_filled() -> None:
     broker2.submit(_intent(qty=1))
     status2 = broker2.find_by_intent("intent-buy")
     assert status2.status == "filled" and status2.filled_quantity == 1
+
+
+def test_order_raw_daytime_session_uses_daytime_endpoint(tmp_path) -> None:
+    session = _FakeSession(get_payloads=[])
+    # post는 토큰 발급 + 주문 2회. 토큰 먼저 캐시해 주문 post만 검사.
+    client = KisClient(_cred("mock"), session=session, token_cache_path=tmp_path / "t.json")
+    client.access_token()
+    client.order_raw(symbol="AAPL", side="buy", quantity=1, price="100", session="daytime")
+    url, body = session.post_calls[-1]
+    assert url.endswith("/uapi/overseas-stock/v1/trading/daytime-order")
+    # 정규장 스위치 대조
+    client.order_raw(symbol="AAPL", side="buy", quantity=1, price="100", session="regular")
+    url2, _ = session.post_calls[-1]
+    assert url2.endswith("/uapi/overseas-stock/v1/trading/order")
