@@ -33,6 +33,10 @@ regime_vix_threshold = 30
 regime_wti_return_days = 20
 regime_wti_return_threshold = 0.30
 regime_exit_confirmation_days = 3
+# 레짐 해제용 VIX 비대칭 임계. 진입 임계와 동일(30)하면 기존 동작과 bit-identical.
+# 낮추면(예: 25) [값, 진입임계] 구간이 hysteresis 밴드가 되어 그라인딩 베어의 재진입 whipsaw를 줄인다.
+# 파라미터 최적값은 grade-B 데이터 확보 후 확정(docs/reviews/2026-07-23-regime-overlay-effectiveness.md).
+regime_exit_vix_threshold = 30
 experimental_equity_cap = 0.50
 
 [validation]

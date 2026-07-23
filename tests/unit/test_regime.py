@@ -71,3 +71,59 @@ def test_regime_policy_a_blocks_increases_and_b_caps_equity() -> None:
 
     assert blocked == {"A": Decimal("0.2"), "B": Decimal(0)}
     assert capped == {"A": Decimal("0.2"), "B": Decimal(0)}
+
+
+def test_regime_exit_hysteresis_keeps_active_in_dip_band() -> None:
+    # 진입 후 VIX가 [exit, entry) 밴드(예: 27, 진입 30/해제 25)에 머물면,
+    # 기본(해제 30)은 해제되지만 hysteresis(해제 25)는 계속 active여야 한다.
+    from dataclasses import replace
+
+    base = load_config("configs/strategy.toml").risk  # regime_exit_vix_threshold=30
+    start = date(2026, 1, 1)
+    inputs = [
+        RegimeInput(start + timedelta(days=index), Decimal(20), Decimal(100)) for index in range(21)
+    ]
+    inputs.append(RegimeInput(start + timedelta(days=21), Decimal(31), Decimal(100)))  # 진입
+    for index in range(22, 27):  # VIX 27로 5거래일: 진입(30) 아래, 해제밴드(25) 위
+        inputs.append(RegimeInput(start + timedelta(days=index), Decimal(27), Decimal(100)))
+
+    default_states = build_regime_states(inputs, base)
+    # 해제 임계 30: 27<=30 -> 위험 아님 -> 3일 후 해제.
+    assert not default_states[start + timedelta(days=24)].active
+
+    hyst = replace(base, regime_exit_vix_threshold=Decimal(25))
+    hyst_states = build_regime_states(inputs, hyst)
+    # 해제 임계 25: 27>25 -> 아직 위험 -> 밴드 내내 active 유지.
+    assert hyst_states[start + timedelta(days=26)].active
+
+
+def test_regime_exit_threshold_zero_sentinel_matches_entry_threshold() -> None:
+    # 센티넬 0은 진입 임계로 폴백 -> 명시적 30과 동일한 상태열(bit-identical).
+    from dataclasses import replace
+
+    base = load_config("configs/strategy.toml").risk
+    start = date(2026, 1, 1)
+    inputs = [
+        RegimeInput(start + timedelta(days=index), Decimal(20), Decimal(100)) for index in range(21)
+    ]
+    inputs.append(RegimeInput(start + timedelta(days=21), Decimal(31), Decimal(100)))
+    for index in range(22, 27):
+        inputs.append(RegimeInput(start + timedelta(days=index), Decimal(27), Decimal(100)))
+
+    explicit30 = build_regime_states(inputs, replace(base, regime_exit_vix_threshold=Decimal(30)))
+    sentinel0 = build_regime_states(inputs, replace(base, regime_exit_vix_threshold=Decimal(0)))
+    e30 = [(s.active, s.false_streak) for s in explicit30.values()]
+    s0 = [(s.active, s.false_streak) for s in sentinel0.values()]
+    assert e30 == s0
+
+
+def test_regime_exit_threshold_above_entry_rejected() -> None:
+    import pytest
+
+    from trade_flow.domain.config import ConfigError
+
+    base = load_config("configs/strategy.toml").risk
+    from dataclasses import replace
+
+    with pytest.raises(ConfigError):
+        replace(base, regime_exit_vix_threshold=Decimal(35))  # 진입(30) 초과 금지

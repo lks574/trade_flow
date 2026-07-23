@@ -54,9 +54,10 @@ def build_regime_states(
             valid = False
             reasons.append("insufficient_wti_history")
 
-        triggered = False
+        entry_triggered = False
+        wti_triggered = False
         if item.vix_close is not None and item.vix_close > config.regime_vix_threshold:
-            triggered = True
+            entry_triggered = True
             reasons.append("vix")
         # WTI 종가가 있는 세션에서만 20거래일 수익률을 계산한다. 종가가 없으면 위에서
         # 이미 valid=False(invalid_wti)로 fail-closed 처리되므로 트리거 계산을 건너뛴다.
@@ -68,17 +69,33 @@ def build_regime_states(
             previous_wti = wti_history[-(config.regime_wti_return_days + 1)]
             wti_return = wti_history[-1] / previous_wti - Decimal(1)
             if wti_return > config.regime_wti_return_threshold:
-                triggered = True
+                entry_triggered = True
+                wti_triggered = True
                 reasons.append("wti")
 
-        if not valid or triggered:
+        # 재진입 강화(비대칭 임계): 진입은 regime_vix_threshold, 해제는 exit 임계 이하가
+        # regime_exit_confirmation_days 연속일 때만. exit 임계가 0이면 진입 임계로 폴백해
+        # 기존 동작과 동일(bit-identical). exit < 진입이면 [exit, 진입] 구간이 hysteresis 밴드.
+        exit_vix_threshold = (
+            config.regime_exit_vix_threshold
+            if config.regime_exit_vix_threshold > 0
+            else config.regime_vix_threshold
+        )
+        still_risky = wti_triggered or (
+            item.vix_close is not None and item.vix_close > exit_vix_threshold
+        )
+
+        if not valid or entry_triggered:
             active = True
             false_streak = 0
         elif active:
-            false_streak += 1
-            if false_streak >= config.regime_exit_confirmation_days:
-                active = False
+            if still_risky:
                 false_streak = 0
+            else:
+                false_streak += 1
+                if false_streak >= config.regime_exit_confirmation_days:
+                    active = False
+                    false_streak = 0
         else:
             false_streak = 0
         output[item.session_date] = RegimeState(

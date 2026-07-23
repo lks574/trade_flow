@@ -130,6 +130,9 @@ class RiskConfig:
     regime_wti_return_threshold: Decimal
     regime_exit_confirmation_days: int
     experimental_equity_cap: Decimal
+    # 레짐 해제(재진입 허용)용 VIX 비대칭 임계. 0이면 진입 임계로 폴백(기존 동작과 동일).
+    # 진입 VIX>regime_vix_threshold, 해제는 VIX<=이 값이 regime_exit_confirmation_days 연속일 때.
+    regime_exit_vix_threshold: Decimal = Decimal(0)
 
     def __post_init__(self) -> None:
         fractions = (
@@ -144,6 +147,11 @@ class RiskConfig:
             raise ConfigError("regime_vix_threshold must be positive")
         if self.regime_wti_return_days <= 0 or self.regime_exit_confirmation_days <= 0:
             raise ConfigError("regime periods must be positive")
+        # 0은 "진입 임계로 폴백" 센티넬. 양수면 진입 임계 이하(hysteresis)여야 의미가 있다.
+        if self.regime_exit_vix_threshold < 0:
+            raise ConfigError("regime_exit_vix_threshold must be non-negative")
+        if self.regime_exit_vix_threshold > self.regime_vix_threshold:
+            raise ConfigError("regime_exit_vix_threshold must not exceed regime_vix_threshold")
 
 
 @dataclass(frozen=True)
@@ -313,6 +321,14 @@ def load_config(path: str | Path) -> AppConfig:
         ),
         experimental_equity_cap=_decimal(
             risk_raw.get("experimental_equity_cap"), "risk.experimental_equity_cap"
+        ),
+        regime_exit_vix_threshold=(
+            _decimal(
+                risk_raw.get("regime_exit_vix_threshold"),
+                "risk.regime_exit_vix_threshold",
+            )
+            if risk_raw.get("regime_exit_vix_threshold") is not None
+            else Decimal(0)
         ),
     )
     costs = validation_raw.get("transaction_cost_bps")
