@@ -71,7 +71,9 @@ whipsaw 완화 가설: 진입은 VIX>30 유지, **해제는 비대칭 임계(VIX
 - 주 효과는 **해제 확인일수 연장(3→10일)**. 비대칭 VIX 임계는 보조.
 - **exit22/5는 실패**: 너무 엄격한 재진입이 2020 V자 회복을 통째로 놓쳐 +49%→−19%. 재진입을 과하게 늦추면 회복 참여를 죽인다 → 명확한 tradeoff.
 
-**결론(잠정, 방향성만)**: 재진입 강화(해제확인 연장 + 완만한 VIX hysteresis)는 whipsaw를 줄이면서 급락 방어를 유지할 수 있는 유망한 방향이다. 단 ⚠️ **combo(25/10)는 2020·2022 동일 realization에서 6개 변형을 비교해 고른 in-sample 파라미터 탐색**(holdout·walk-forward·다중비교 보정 없음)이므로 **프로덕션 기본값으로 확정하면 과최적화 위험**이 크다. 또한 "전체적으로 우월"이 아니라 **선택 구간 + 전체 MDD 개선**이며 전체 총수익은 baseline보다 7.2%p 낮다(MDD↔수익 tradeoff). 파라미터 민감(exit22/5는 회복 참여 상실)하고 grade-C 단일 realization이므로 **정책·파라미터 확정은 grade-B 전제**. 방향성 승인 후 프로덕션 `build_regime_states`에 `regime_exit_vix_threshold`·`regime_exit_confirmation_days`를 도입하되 **기본값=현행 30/3으로 bit-identical**(active·valid·false_streak·reasons까지 동일)한 회귀 테스트를 둔다.
+**결론(잠정, 방향성만)**: 재진입 강화(해제확인 연장 + 완만한 VIX hysteresis)는 whipsaw를 줄이면서 급락 방어를 유지할 수 있는 유망한 방향이다. 단 ⚠️ **combo(25/10)는 2020·2022 동일 realization에서 6개 변형을 비교해 고른 in-sample 파라미터 탐색**(holdout·walk-forward·다중비교 보정 없음)이므로 **프로덕션 기본값으로 확정하면 과최적화 위험**이 크다. 또한 "전체적으로 우월"이 아니라 **선택 구간 + 전체 MDD 개선**이며 전체 총수익은 baseline보다 7.2%p 낮다(MDD↔수익 tradeoff). 파라미터 민감(exit22/5는 회복 참여 상실)하고 grade-C 단일 realization이므로 **정책·파라미터 확정은 grade-B 전제**.
+
+> ✅ **방향성 승인·반영 완료(커밋 `f746841`)**: 프로덕션 `build_regime_states`에 `regime_exit_vix_threshold`(비대칭 해제 임계)를 추가. 진입은 `regime_vix_threshold`, 해제는 exit 임계 이하가 `regime_exit_confirmation_days` 연속일 때. **기본값 30(=진입 임계)으로 bit-identical**(실데이터 baseline sha `0917d718` 재확인, active·false_streak 동일 회귀 테스트 3건). **파라미터 값(예: 25/10)은 grade-B 후 walk-forward로 확정** — 현재는 활성화하지 않음(기본 30/3 유지).
 
 ## Codex 교차검증 (2026-07-23)
 
