@@ -6,8 +6,8 @@
 # 로그: data/weekly_report.log (append). 실패해도 다음 단계는 계속 진행하되
 # 종료 코드로 실패를 남긴다.
 #
-# crontab 예(매주 수요일 07:30 KST — 미국 화요일 장 마감 데이터 반영):
-#   30 7 * * 3 /Users/kyungseok.lee/workspace/dev/trade_flow/scripts/weekly_report.sh
+# crontab 예(매주 수요일 10:30 KST — 미국 화요일 장 마감 데이터 반영):
+#   30 10 * * 3 /Users/kyungseok.lee/workspace/dev/trade_flow/scripts/weekly_report.sh
 
 set -u
 REPO="$(cd "$(dirname "$0")/.." && pwd)"

@@ -1,10 +1,10 @@
 #!/bin/zsh
-# 일일 루틴 (평일 07:10 KST, cron 등록용).
+# 일일 루틴 (평일 10:10 KST, cron 등록용).
 #   [무음]  1) 증분 데이터 수집  2) 추천 스냅샷 저장  3) 예보 채점(문서 갱신)
 #   [텔레그램] 4) 계좌 손절 점검  5) 세계 정세·큰손 동향 다이제스트(claude 헤드리스)
 #   실패한 단계는 텔레그램 critical 경보로 전달한다(API 깨짐 조기 발견).
 #
-# crontab 예: 10 7 * * 1-5 /Users/kyungseok.lee/workspace/dev/trade_flow/scripts/daily_routine.sh
+# crontab 예: 10 10 * * 1-5 /Users/kyungseok.lee/workspace/dev/trade_flow/scripts/daily_routine.sh
 
 set -u
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
